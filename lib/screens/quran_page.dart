@@ -305,9 +305,9 @@ class _QuranPageState extends State<QuranPage> {
                     fontSize: 12,
                     color: Colors.black,
                   )),
-              subtitle: Text(ayah["sura_name_ar"],
+              subtitle: Text('${ayah["sura_name_ar"]} / ص  ${ayah["page"] - 1}',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 10,
                     color: Colors.black,
                   )),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16),
