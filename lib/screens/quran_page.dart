@@ -160,7 +160,7 @@ class _QuranPageState extends State<QuranPage> {
             style: const TextStyle(
                 fontSize: 12,
                 color: Colors.black,
-                fontFamily: 'avenir',
+                fontFamily: 'amiri',
                 fontWeight: FontWeight.bold),
             child: Text(hizb),
           ),
@@ -168,7 +168,7 @@ class _QuranPageState extends State<QuranPage> {
             style: const TextStyle(
                 fontSize: 12,
                 color: Colors.black,
-                fontFamily: 'avenir',
+                fontFamily: 'amiri',
                 fontWeight: FontWeight.bold),
             child: Text(surahName),
           )
