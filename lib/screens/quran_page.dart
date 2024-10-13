@@ -91,7 +91,9 @@ class _QuranPageState extends State<QuranPage> {
 
     // Wait until the first frame is rendered before jumping to the page
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      pageController.jumpToPage(lastOpenedPage - 1);
+      if (pageController.hasClients) {
+        pageController.jumpToPage(lastOpenedPage - 1);
+      }
     });
   }
 
@@ -210,7 +212,7 @@ class _QuranPageState extends State<QuranPage> {
                     _saveLastOpenedPage(index + 1);
                   },
                   reverse: true, // For RTL navigation
-                  itemCount: 604,
+                  itemCount: totalPagesNumber,
                   itemBuilder: (context, index) {
                     return SafeArea(
                       top: true,
