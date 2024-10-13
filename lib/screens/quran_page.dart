@@ -4,10 +4,6 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:dartarabic/dartarabic.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart'; // For loading the JSON file
-import 'package:path/path.dart' as flutter_path;
-import 'package:sqflite/sqflite.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:al_quran/al_quran.dart';
@@ -34,44 +30,6 @@ class _QuranPageState extends State<QuranPage> {
     initialization();
 
     super.initState();
-  }
-
-  Future<Database> initializeDatabase() async {
-    Directory documentsDirectory = await getApplicationDocumentsDirectory();
-    String path = flutter_path.join(documentsDirectory.path, "quran.db");
-
-    // Check if the database file exists, if not, copy it from assets
-    if (!await File(path).exists()) {
-      ByteData data = await rootBundle.load("assets/quran.db");
-      List<int> bytes =
-          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-      await File(path).writeAsBytes(bytes);
-    }
-
-    return openDatabase(path);
-  }
-
-  Future<List<Map<String, dynamic>>> searchVerseByText(
-      Database db, String verseText) async {
-    String query = '''
-    SELECT * FROM quran WHERE SearchText LIKE ?
-  ''';
-    return await db.rawQuery(query, ['%$verseText%']);
-  }
-
-  void searchAndDisplayVerse(String verseText) async {
-    Database db = await initializeDatabase();
-    List<Map<String, dynamic>> results = await searchVerseByText(db, verseText);
-
-    if (results.isNotEmpty) {
-      for (var result in results) {
-        AlertDialog(
-            content: Text(
-                "Chapter: ${result['SoraName_ar']} | Verse: ${result['AyaDiac']}"));
-      }
-    } else {
-      AlertDialog(content: Text('No verses found containing: $verseText'));
-    }
   }
 
   // Load Quran JSON data from assets
@@ -125,7 +83,6 @@ class _QuranPageState extends State<QuranPage> {
 
     _loadLastOpenedPage();
     loadQuranData();
-    initializeDatabase();
     FlutterNativeSplash.remove();
   }
 
