@@ -355,9 +355,8 @@ class _QuranPageState extends State<QuranPage> {
                   )),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               onTap: () {
-                debugPrint("aya: $ayah");
                 Navigator.of(context).pop();
-                pageController.jumpToPage(ayah["page"]);
+                pageController.jumpToPage(ayah["page"] - 1);
               },
             ),
             const Divider(
