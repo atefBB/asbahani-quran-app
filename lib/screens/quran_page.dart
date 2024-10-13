@@ -368,8 +368,8 @@ class _QuranPageState extends State<QuranPage>
               contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               onTap: () {
                 debugPrint("aya: $ayah");
-                //Navigator.of(context).pop();
-                //FlutterQuran().navigateToAyah(ayah);
+                Navigator.of(context).pop();
+                pageController.jumpToPage(ayah["page"]);
               },
             ),
             const Divider(
