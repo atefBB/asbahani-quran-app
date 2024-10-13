@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:flutter_quran/flutter_quran.dart';
 import 'package:dartarabic/dartarabic.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart'; // For loading the JSON file
@@ -23,15 +22,9 @@ class QuranPage extends StatefulWidget {
   State<QuranPage> createState() => _QuranPageState();
 }
 
-class _QuranPageState extends State<QuranPage>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
+class _QuranPageState extends State<QuranPage> {
   TextEditingController searchController = TextEditingController();
   static PageController pageController = PageController();
-
-  var surahs = [];
 
   List<dynamic> quran = [];
   List searchResults = [];
@@ -95,6 +88,7 @@ class _QuranPageState extends State<QuranPage>
     SharedPreferences prefs = await SharedPreferences.getInstance();
     int lastOpenedPage =
         prefs.getInt('lastOpenedPage') ?? 1; // Default to page 1
+
     // Wait until the first frame is rendered before jumping to the page
     WidgetsBinding.instance.addPostFrameCallback((_) {
       pageController.jumpToPage(lastOpenedPage - 1);
@@ -126,8 +120,6 @@ class _QuranPageState extends State<QuranPage>
   void initialization() async {
     // This is where you can initialize the resources needed by your app while
     // the splash screen is displayed.
-
-    FlutterQuran().init();
 
     _loadLastOpenedPage();
     loadQuranData();
@@ -199,11 +191,7 @@ class _QuranPageState extends State<QuranPage>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    setState(() {
-      surahs = FlutterQuran().getAllSurahs();
-    });
-
+    const totalPagesNumber = 604;
     return FutureBuilder(
         future:
             Provider.of<ChapterProvider>(context, listen: false).loadChapters(),
@@ -331,7 +319,6 @@ class _QuranPageState extends State<QuranPage>
             ),
             onChanged: (String query) {
               _performSearch(query);
-              //searchAndDisplayVerse(query);
             },
           ),
           Expanded(
@@ -343,7 +330,6 @@ class _QuranPageState extends State<QuranPage>
   }
 
   Widget _newSearchResultsWidget(context, searchResults) {
-    super.build(context);
     if (searchResults.isEmpty) {
       return const Center(child: Text('لم يتم العثور على نتائج'));
     }
@@ -380,13 +366,5 @@ class _QuranPageState extends State<QuranPage>
         );
       },
     );
-  }
-
-  int _getChapterPageFromChapterNumber(int chapterNumber) {
-    return quranPages.indexWhere((page) => page.surah == chapterNumber);
-  }
-
-  void _goToChapter(int chapterNumber) {
-    pageController.jumpToPage(_getChapterPageFromChapterNumber(chapterNumber));
   }
 }
