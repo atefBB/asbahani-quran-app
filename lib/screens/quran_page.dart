@@ -96,8 +96,9 @@ class _QuranPageState extends State<QuranPage> {
 
       _pageController
           .jumpToPage(lastOpenedPage - 1); // Page starts from 0, so subtract 1
+
+      FlutterNativeSplash.remove();
     });
-    FlutterNativeSplash.remove();
   }
 
   Widget _pageImageExpandedRow(context, index) {
