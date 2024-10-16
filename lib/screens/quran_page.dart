@@ -22,6 +22,7 @@ class _QuranPageState extends State<QuranPage> {
 
   List<dynamic> quran = [];
   List chapters = [];
+  List searchResults = [];
 
   @override
   void initState() {
@@ -115,8 +116,7 @@ class _QuranPageState extends State<QuranPage> {
     var hizb = _getHizbText(index + 1);
 
     return Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 11.0), // Add padding here
+        padding: const EdgeInsets.symmetric(horizontal: 11.0),
         child:
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           DefaultTextStyle(
@@ -250,9 +250,17 @@ class _QuranPageState extends State<QuranPage> {
     );
   }
 
-  Widget _searchTab(BuildContext context) {
-    List searchResults = [];
+  void _performSearch(String query) {
+    setState(() {
+      searchResults = quran.where((ayah) {
+        return ayah['aya_text_emlaey']
+            .toLowerCase()
+            .contains(query.toLowerCase());
+      }).toList();
+    });
+  }
 
+  Widget _searchTab(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -264,25 +272,20 @@ class _QuranPageState extends State<QuranPage> {
               border: OutlineInputBorder(),
             ),
             onChanged: (String query) {
-              setState(() {
-                searchResults = quran.where((ayah) {
-                  return ayah['aya_text_emlaey']
-                      .toLowerCase()
-                      .contains(query.toLowerCase());
-                }).toList();
-                debugPrint("search: $searchResults");
-              });
+              _performSearch(query);
+              debugPrint("changed: ${searchResults.length}");
             },
           ),
           Expanded(
-            child: _searchResultsWidget(context, searchResults),
+            child: _searchResultsWidget(),
           ),
         ],
       ),
     );
   }
 
-  Widget _searchResultsWidget(context, searchResults) {
+  Widget _searchResultsWidget() {
+    debugPrint("search: ${searchResults.isEmpty}");
     if (searchResults.isEmpty) {
       return const Center(child: Text('لم يتم العثور على نتائج'));
     }
@@ -290,7 +293,6 @@ class _QuranPageState extends State<QuranPage> {
       itemCount: searchResults.length,
       itemBuilder: (context, index) {
         final ayah = searchResults[index];
-
         return Column(
           children: [
             ListTile(
