@@ -273,7 +273,6 @@ class _QuranPageState extends State<QuranPage> {
             ),
             onChanged: (String query) {
               _performSearch(query);
-              debugPrint("changed: ${searchResults.length}");
             },
           ),
           Expanded(
@@ -285,7 +284,6 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _searchResultsWidget() {
-    debugPrint("search: ${searchResults.isEmpty}");
     if (searchResults.isEmpty) {
       return const Center(child: Text('لم يتم العثور على نتائج'));
     }
