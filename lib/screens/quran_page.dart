@@ -18,8 +18,7 @@ class QuranPage extends StatefulWidget {
 
 class _QuranPageState extends State<QuranPage> {
   TextEditingController searchController = TextEditingController();
-  late PageController _pageController;
-  int _initialPage = 0;
+  var _pageController;
 
   List<dynamic> quran = [];
   List chapters = [];
@@ -51,13 +50,8 @@ class _QuranPageState extends State<QuranPage> {
     int lastOpenedPage = await _getLastOpenedPage();
 
     setState(() {
-      if (_pageController.hasClients) {
-        _pageController.jumpToPage(lastOpenedPage - 1);
-      } else {
-        _pageController = PageController(
-            initialPage:
-                lastOpenedPage - 1); // Page starts from 0, so subtract 1
-      }
+      _pageController = PageController(
+          initialPage: lastOpenedPage - 1); // Page starts from 0, so subtract 1
     });
   }
 
@@ -91,14 +85,17 @@ class _QuranPageState extends State<QuranPage> {
   void initialization() {
     // This is where you can initialize the resources needed by your app while
     // the splash screen is displayed.
-    _pageController = PageController(initialPage: _initialPage);
+    _pageController = PageController();
 
     _loadQuranData();
     _loadQuranChapters();
 
     // Load the last opened page after the first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadLastOpenedPage();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      int lastOpenedPage = await _getLastOpenedPage();
+
+      _pageController
+          .jumpToPage(lastOpenedPage - 1); // Page starts from 0, so subtract 1
     });
     FlutterNativeSplash.remove();
   }
