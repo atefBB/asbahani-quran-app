@@ -46,15 +46,6 @@ class _QuranPageState extends State<QuranPage> {
     });
   }
 
-  Future<void> _loadLastOpenedPage() async {
-    int lastOpenedPage = await _getLastOpenedPage();
-
-    setState(() {
-      _pageController = PageController(
-          initialPage: lastOpenedPage - 1); // Page starts from 0, so subtract 1
-    });
-  }
-
   Future<int> _getLastOpenedPage() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getInt('lastOpenedPage') ?? 1; // Default to page 1
