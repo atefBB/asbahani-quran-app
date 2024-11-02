@@ -94,13 +94,14 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _pageImageExpandedRow(context, index) {
+    var asbahaniPageParth = 'assets/quran_pages/$index.png';
     return Expanded(
       child: Row(
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Image.asset(
-            'assets/quran_pages/$index.png',
+            asbahaniPageParth,
             width: MediaQuery.sizeOf(context).width,
             height: MediaQuery.sizeOf(context).height,
             fit: BoxFit.fill,
