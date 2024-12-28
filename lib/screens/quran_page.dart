@@ -94,7 +94,7 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _pageImageExpandedRow(context, index) {
-    var asbahaniPageParth = 'assets/quran_pages/$index.png';
+    var asbahaniPagePath = 'assets/quran_pages/$index.png';
     var azrakPagePath = 'assets/azrak/$index.png';
     var isAsbahaniWayChoosen = false;
 
@@ -104,7 +104,7 @@ class _QuranPageState extends State<QuranPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Image.asset(
-            isAsbahaniWayChoosen == true ? asbahaniPageParth : azrakPagePath,
+            isAsbahaniWayChoosen == true ? asbahaniPagePath : azrakPagePath,
             width: MediaQuery.sizeOf(context).width,
             height: MediaQuery.sizeOf(context).height,
             fit: BoxFit.fill,
