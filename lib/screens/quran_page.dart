@@ -23,6 +23,7 @@ class _QuranPageState extends State<QuranPage> {
   List<dynamic> quran = [];
   List chapters = [];
   List searchResults = [];
+  List<int> bookmarks = [];
 
   @override
   void initState() {
@@ -47,6 +48,14 @@ class _QuranPageState extends State<QuranPage> {
     });
   }
 
+  Future<void> _loadBookmarks() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bookmarks =
+        prefs.getStringList('bookmarks')?.map((e) => int.parse(e)).toList() ??
+            [];
+    setState(() {});
+  }
+
   Future<int> _getLastOpenedPage() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getInt('lastOpenedPage') ?? 1; // Default to page 1
@@ -56,6 +65,23 @@ class _QuranPageState extends State<QuranPage> {
   Future<void> _saveLastOpenedPage(int pageNumber) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt('lastOpenedPage', pageNumber);
+  }
+
+  Future<void> _saveBookmarks() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+        'bookmarks', bookmarks.map((e) => e.toString()).toList());
+  }
+
+  void _toggleBookmark(int page) {
+    setState(() {
+      if (bookmarks.contains(page)) {
+        bookmarks.remove(page);
+      } else {
+        bookmarks.add(page);
+      }
+      _saveBookmarks();
+    });
   }
 
   String _getHizbText(int page) {
@@ -81,6 +107,7 @@ class _QuranPageState extends State<QuranPage> {
 
     _loadQuranData();
     _loadQuranChapters();
+    _loadBookmarks();
 
     // Load the last opened page after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -114,6 +141,10 @@ class _QuranPageState extends State<QuranPage> {
     );
   }
 
+  bool isBookmarked(int page) {
+    return bookmarks.contains(page);
+  }
+
   Widget _headerRow(index) {
     var surahName = DartArabic.stripTashkeel(
         AlQuran.surahDetails.byPageNumber(index + 1).last.name);
@@ -130,6 +161,12 @@ class _QuranPageState extends State<QuranPage> {
                 fontFamily: 'amiri',
                 fontWeight: FontWeight.bold),
             child: Text(hizb),
+          ),
+          IconButton(
+            icon: Icon(isBookmarked(index + 1)
+                ? Icons.bookmark
+                : Icons.bookmark_outline),
+            onPressed: () => _toggleBookmark(index + 1),
           ),
           DefaultTextStyle(
             style: const TextStyle(
@@ -198,15 +235,13 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   void _showMenu(context) {
-    // @todo add bookmarked pages as tab
-
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: DefaultTabController(
-            length: 2, // 2 tabs: Chapters, Search
+            length: 3,
             child: Column(
               children: [
                 const TabBar(
@@ -215,6 +250,7 @@ class _QuranPageState extends State<QuranPage> {
                   tabs: [
                     Tab(text: 'السور'),
                     Tab(text: 'البحث'),
+                    Tab(text: "العلامات")
                   ],
                 ),
                 Expanded(
@@ -222,6 +258,7 @@ class _QuranPageState extends State<QuranPage> {
                     children: [
                       _chapterTab(context),
                       _searchTab(context),
+                      _bookmarksTab(context)
                     ],
                   ),
                 ),
@@ -262,6 +299,22 @@ class _QuranPageState extends State<QuranPage> {
             .contains(query.toLowerCase());
       }).toList();
     });
+  }
+
+  Widget _bookmarksTab(BuildContext context) {
+    return ListView.builder(
+      itemCount: bookmarks.length,
+      itemBuilder: (context, index) {
+        final page = bookmarks[index];
+        return ListTile(
+          title: Text('الصفحة $page'),
+          onTap: () {
+            Navigator.pop(context);
+            _pageController.jumpToPage(page - 1);
+          },
+        );
+      },
+    );
   }
 
   Widget _searchTab(BuildContext context) {
