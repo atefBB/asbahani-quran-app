@@ -24,6 +24,8 @@ class _QuranPageState extends State<QuranPage> {
   List chapters = [];
   List searchResults = [];
   List<int> bookmarks = [];
+  List ways = ["الأزرق", "الأصبهاني"];
+  int activeWayIndex = 1; // asbahani
 
   @override
   void initState() {
@@ -65,6 +67,20 @@ class _QuranPageState extends State<QuranPage> {
   Future<void> _saveLastOpenedPage(int pageNumber) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt('lastOpenedPage', pageNumber);
+  }
+
+  Future<void> _saveActiveWayIndex(int newActiveWayIndex) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('activeWayIndex', newActiveWayIndex);
+
+    setState(() {
+      activeWayIndex = newActiveWayIndex;
+    });
+  }
+
+  Future<int> _getActiveWayIndex() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('activeWayIndex') ?? 1; // Default to asbahani
   }
 
   Future<void> _saveBookmarks() async {
@@ -112,6 +128,7 @@ class _QuranPageState extends State<QuranPage> {
     // Load the last opened page after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       int lastOpenedPage = await _getLastOpenedPage();
+      activeWayIndex = await _getActiveWayIndex();
 
       _pageController
           .jumpToPage(lastOpenedPage - 1); // Page starts from 0, so subtract 1
@@ -123,7 +140,8 @@ class _QuranPageState extends State<QuranPage> {
   Widget _pageImageExpandedRow(context, index) {
     var asbahaniPagePath = 'assets/quran_pages/$index.png';
     var azrakPagePath = 'assets/azrak/$index.png';
-    var isAsbahaniWayChoosen = false;
+
+    var isAsbahaniWayChoosen = activeWayIndex == 1 ? true : false;
 
     return Expanded(
       child: Row(
@@ -241,7 +259,7 @@ class _QuranPageState extends State<QuranPage> {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: DefaultTabController(
-            length: 3,
+            length: 4,
             child: Column(
               children: [
                 const TabBar(
@@ -250,7 +268,8 @@ class _QuranPageState extends State<QuranPage> {
                   tabs: [
                     Tab(text: 'السور'),
                     Tab(text: 'البحث'),
-                    Tab(text: "العلامات")
+                    Tab(text: "العلامات"),
+                    Tab(text: "الطريق")
                   ],
                 ),
                 Expanded(
@@ -258,7 +277,8 @@ class _QuranPageState extends State<QuranPage> {
                     children: [
                       _chapterTab(context),
                       _searchTab(context),
-                      _bookmarksTab(context)
+                      _bookmarksTab(context),
+                      _waysTab(context)
                     ],
                   ),
                 ),
@@ -299,6 +319,23 @@ class _QuranPageState extends State<QuranPage> {
             .contains(query.toLowerCase());
       }).toList();
     });
+  }
+
+  Widget _waysTab(BuildContext context) {
+    return ListView.builder(
+      itemCount: ways.length,
+      itemBuilder: (context, index) {
+        final way = ways[index];
+
+        return ListTile(
+          title: Text('$way'),
+          onTap: () {
+            Navigator.pop(context);
+            _saveActiveWayIndex(index);
+          },
+        );
+      },
+    );
   }
 
   Widget _bookmarksTab(BuildContext context) {
