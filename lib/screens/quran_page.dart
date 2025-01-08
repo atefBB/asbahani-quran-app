@@ -7,7 +7,7 @@ import 'package:flutter/services.dart'; // For loading the JSON file
 import 'dart:async';
 import 'package:al_quran/al_quran.dart';
 
-import '../data/page_data.dart';
+import 'package:asbahani/data/page_data.dart';
 
 class QuranPage extends StatefulWidget {
   const QuranPage({super.key});
