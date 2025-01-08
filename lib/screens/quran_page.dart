@@ -63,7 +63,6 @@ class _QuranPageState extends State<QuranPage> {
     return prefs.getInt('lastOpenedPage') ?? 1; // Default to page 1
   }
 
-  // save the last opened page in SharedPreferences
   Future<void> _saveLastOpenedPage(int pageNumber) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt('lastOpenedPage', pageNumber);
