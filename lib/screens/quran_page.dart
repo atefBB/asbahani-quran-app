@@ -20,6 +20,7 @@ class _QuranPageState extends State<QuranPage> {
   TextEditingController searchController = TextEditingController();
   var _pageController;
 
+  int totalPagesNumber = 604;
   List<dynamic> quran = [];
   List chapters = [];
   List searchResults = [];
@@ -214,8 +215,6 @@ class _QuranPageState extends State<QuranPage> {
 
   @override
   Widget build(BuildContext context) {
-    const totalPagesNumber = 604;
-
     return GestureDetector(
       onTap: () => _showMenu(context),
       child: PageView.builder(
