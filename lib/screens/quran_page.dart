@@ -137,6 +137,7 @@ class _QuranPageState extends State<QuranPage> {
     });
   }
 
+// @todo find a way to fix landscape view
   Widget _pageImageExpandedRow(context, index) {
     var asbahaniPagePath = 'assets/quran_pages/$index.png';
     var azrakPagePath = 'assets/azrak/$index.png';
