@@ -18,7 +18,7 @@ class QuranPage extends StatefulWidget {
 
 class _QuranPageState extends State<QuranPage> {
   TextEditingController searchController = TextEditingController();
-  var _pageController;
+  dynamic _pageController;
 
   int totalPagesNumber = 604;
   List<dynamic> quran = [];
