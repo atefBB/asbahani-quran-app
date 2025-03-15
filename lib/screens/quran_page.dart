@@ -137,26 +137,47 @@ class _QuranPageState extends State<QuranPage> {
     });
   }
 
-// @todo find a way to fix landscape view
   Widget _pageImageExpandedRow(context, index) {
     var asbahaniPagePath = 'assets/quran_pages/$index.png';
     var azrakPagePath = 'assets/azrak/$index.png';
 
     var isAsbahaniWayChoosen = activeWayIndex == 1 ? true : false;
+    bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Expanded(
-      child: Row(
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(
-            isAsbahaniWayChoosen == true ? asbahaniPagePath : azrakPagePath,
-            width: MediaQuery.sizeOf(context).width,
-            height: MediaQuery.sizeOf(context).height,
-            fit: BoxFit.fill,
-          ),
-        ],
-      ),
+      child: isLandscape
+          ? InteractiveViewer(
+              panEnabled: true, // Enable panning
+              boundaryMargin: const EdgeInsets.all(10),
+              minScale: 0.8,
+              maxScale: 3.0,
+              child: SingleChildScrollView(
+                //scrollDirection: Axis.vertical, // Enables vertical scrolling
+                child: Image.asset(
+                  isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
+                  width: MediaQuery.of(context)
+                      .size
+                      .width, // Fit width of the screen
+                  fit: BoxFit
+                      .fitWidth, // Maintain aspect ratio while fitting width
+                ),
+              ),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  isAsbahaniWayChoosen == true
+                      ? asbahaniPagePath
+                      : azrakPagePath,
+                  width: MediaQuery.sizeOf(context).width,
+                  height: MediaQuery.sizeOf(context).height,
+                  fit: BoxFit.fill,
+                ),
+              ],
+            ),
     );
   }
 
