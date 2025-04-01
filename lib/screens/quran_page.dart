@@ -147,21 +147,11 @@ class _QuranPageState extends State<QuranPage> {
 
     return Expanded(
       child: isLandscape
-          ? InteractiveViewer(
-              panEnabled: true, // Enable panning
-              boundaryMargin: const EdgeInsets.all(10),
-              minScale: 0.8,
-              maxScale: 3.0,
-              child: SingleChildScrollView(
-                //scrollDirection: Axis.vertical, // Enables vertical scrolling
-                child: Image.asset(
-                  isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
-                  width: MediaQuery.of(context)
-                      .size
-                      .width, // Fit width of the screen
-                  fit: BoxFit
-                      .fitWidth, // Maintain aspect ratio while fitting width
-                ),
+          ? SingleChildScrollView(
+              child: Image.asset(
+                isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
+                width: MediaQuery.of(context).size.width,
+                fit: BoxFit.fitWidth,
               ),
             )
           : Row(
