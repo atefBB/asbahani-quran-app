@@ -25,7 +25,10 @@ class _QuranPageState extends State<QuranPage> {
   List chapters = [];
   List searchResults = [];
   List<int> bookmarks = [];
-  List ways = ["الأزرق", "الأصبهاني"];
+  List ways = [
+    "مصحف مجمع الملك فهد (ورش من طريق الأزرق)",
+    "مصحف الأصبهاني إعداد علي صالح"
+  ];
   int activeWayIndex = 1; // asbahani
 
   @override
@@ -279,7 +282,7 @@ class _QuranPageState extends State<QuranPage> {
                     Tab(text: 'السور'),
                     Tab(text: 'البحث'),
                     Tab(text: "العلامات"),
-                    Tab(text: "الطريق")
+                    Tab(text: "المصاحف")
                   ],
                 ),
                 Expanded(
