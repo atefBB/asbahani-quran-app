@@ -19,6 +19,8 @@ class QuranPage extends StatefulWidget {
 class _QuranPageState extends State<QuranPage> {
   TextEditingController searchController = TextEditingController();
   TextEditingController goToPageController = TextEditingController();
+  TextEditingController juzSearchController = TextEditingController();
+  TextEditingController hizbSearchController = TextEditingController();
   dynamic _pageController;
 
   int totalPagesNumber = 604;
@@ -273,7 +275,7 @@ class _QuranPageState extends State<QuranPage> {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: DefaultTabController(
-            length: 5,
+            length: 6,
             child: Column(
               children: [
                 const TabBar(
@@ -285,6 +287,7 @@ class _QuranPageState extends State<QuranPage> {
                     Tab(text: "العلامات"),
                     Tab(text: "المصاحف"),
                     Tab(text: "انتقال"),
+                    Tab(text: "الأجزاء"),
                   ],
                 ),
                 Expanded(
@@ -295,6 +298,7 @@ class _QuranPageState extends State<QuranPage> {
                       _bookmarksTab(context),
                       _waysTab(context),
                       _goToPageTab(context),
+                      _juzHizbTab(context),
                     ],
                   ),
                 ),
@@ -489,5 +493,94 @@ class _QuranPageState extends State<QuranPage> {
     Future.delayed(const Duration(milliseconds: 300), () {
       _pageController.jumpToPage(pageNumber - 1);
     });
+  }
+
+  Widget _juzHizbTab(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          const TabBar(
+            labelColor: Colors.blue,
+            unselectedLabelColor: Colors.black,
+            indicatorColor: Colors.blue,
+            tabs: [
+              Tab(text: 'الأجزاء'),
+              Tab(text: 'الأحزاب'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _juzTab(context),
+                _hizbTab(context),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _juzTab(BuildContext context) {
+    final juzMap = <int, int>{};
+    for (int i = 0; i < quranPages.length; i++) {
+      final juz = quranPages[i].juz;
+      if (!juzMap.containsKey(juz)) {
+        juzMap[juz] = i + 1;
+      }
+    }
+
+    return ListView.builder(
+      itemCount: juzMap.length,
+      itemBuilder: (context, index) {
+        final juzNumber = index + 1;
+        final pageNumber = juzMap[juzNumber]!;
+        return ListTile(
+          leading: const Text('جزء', style: TextStyle(fontFamily: 'amiri')),
+          title: Text('$juzNumber'),
+          trailing: Text('ص $pageNumber'),
+          onTap: () {
+            Navigator.pop(context);
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (_pageController.hasClients) {
+                _pageController.jumpToPage(pageNumber - 1);
+              }
+            });
+          },
+        );
+      },
+    );
+  }
+
+  Widget _hizbTab(BuildContext context) {
+    final hizbMap = <int, int>{};
+    for (int i = 0; i < quranPages.length; i++) {
+      final hizb = quranPages[i].hizb;
+      if (!hizbMap.containsKey(hizb)) {
+        hizbMap[hizb] = i + 1;
+      }
+    }
+
+    return ListView.builder(
+      itemCount: hizbMap.length,
+      itemBuilder: (context, index) {
+        final hizbNumber = index + 1;
+        final pageNumber = hizbMap[hizbNumber]!;
+        return ListTile(
+          leading: const Text('حزب', style: TextStyle(fontFamily: 'amiri')),
+          title: Text('$hizbNumber'),
+          trailing: Text('ص $pageNumber'),
+          onTap: () {
+            Navigator.pop(context);
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (_pageController.hasClients) {
+                _pageController.jumpToPage(pageNumber - 1);
+              }
+            });
+          },
+        );
+      },
+    );
   }
 }
