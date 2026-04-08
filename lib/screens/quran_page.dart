@@ -216,18 +216,21 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _footerRow(index) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        DefaultTextStyle(
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onLongPress: () => _showQuickGoToPageDialog(context),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          DefaultTextStyle(
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+            ),
+            child: Text('${index + 1}'),
           ),
-          child: Text('${index + 1}'),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -493,6 +496,61 @@ class _QuranPageState extends State<QuranPage> {
     Future.delayed(const Duration(milliseconds: 300), () {
       _pageController.jumpToPage(pageNumber - 1);
     });
+  }
+
+  void _showQuickGoToPageDialog(BuildContext context) {
+    final quickController = TextEditingController();
+    final currentPage = (_pageController.hasClients && _pageController.page != null)
+        ? _pageController.page!.toInt() + 1
+        : 1;
+    quickController.text = currentPage.toString();
+    quickController.selection = TextSelection(baseOffset: 0, extentOffset: quickController.text.length);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('انتقل إلى صفحة', textAlign: TextAlign.center),
+        content: TextField(
+          controller: quickController,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (value) {
+            final pageNumber = int.tryParse(value.trim());
+            if (pageNumber != null && pageNumber >= 1 && pageNumber <= totalPagesNumber) {
+              Navigator.pop(context);
+              Future.delayed(const Duration(milliseconds: 300), () {
+                if (_pageController.hasClients) {
+                  _pageController.jumpToPage(pageNumber - 1);
+                }
+              });
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final pageNumber = int.tryParse(quickController.text.trim());
+              if (pageNumber != null && pageNumber >= 1 && pageNumber <= totalPagesNumber) {
+                Navigator.pop(context);
+                Future.delayed(const Duration(milliseconds: 300), () {
+                  if (_pageController.hasClients) {
+                    _pageController.jumpToPage(pageNumber - 1);
+                  }
+                });
+              }
+            },
+            child: const Text('انتقل'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _juzHizbTab(BuildContext context) {
