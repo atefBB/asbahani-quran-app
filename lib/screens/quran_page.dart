@@ -18,6 +18,7 @@ class QuranPage extends StatefulWidget {
 
 class _QuranPageState extends State<QuranPage> {
   TextEditingController searchController = TextEditingController();
+  TextEditingController goToPageController = TextEditingController();
   dynamic _pageController;
 
   int totalPagesNumber = 604;
@@ -272,7 +273,7 @@ class _QuranPageState extends State<QuranPage> {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: DefaultTabController(
-            length: 4,
+            length: 5,
             child: Column(
               children: [
                 const TabBar(
@@ -282,7 +283,8 @@ class _QuranPageState extends State<QuranPage> {
                     Tab(text: 'السور'),
                     Tab(text: 'البحث'),
                     Tab(text: "العلامات"),
-                    Tab(text: "المصاحف")
+                    Tab(text: "المصاحف"),
+                    Tab(text: "انتقال"),
                   ],
                 ),
                 Expanded(
@@ -291,7 +293,8 @@ class _QuranPageState extends State<QuranPage> {
                       _chapterTab(context),
                       _searchTab(context),
                       _bookmarksTab(context),
-                      _waysTab(context)
+                      _waysTab(context),
+                      _goToPageTab(context),
                     ],
                   ),
                 ),
@@ -428,5 +431,63 @@ class _QuranPageState extends State<QuranPage> {
         );
       },
     );
+  }
+
+  Widget _goToPageTab(BuildContext context) {
+    final currentPage = (_pageController.hasClients && _pageController.page != null)
+        ? _pageController.page!.toInt() + 1
+        : 1;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          TextField(
+            controller: goToPageController,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            decoration: InputDecoration(
+              hintText: 'الصفحة الحالية: $currentPage',
+              hintStyle: const TextStyle(fontSize: 16),
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.arrow_forward),
+                onPressed: () => _goToPage(context),
+              ),
+            ),
+            onSubmitted: (_) => _goToPage(context),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: () => _goToPage(context),
+            child: const Text('انتقل'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _goToPage(BuildContext context) {
+    final input = goToPageController.text.trim();
+    if (input.isEmpty) return;
+
+    final pageNumber = int.tryParse(input);
+    if (pageNumber == null || pageNumber < 1 || pageNumber > totalPagesNumber) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('رقم الصفحة يجب أن يكون بين 1 و $totalPagesNumber'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    goToPageController.clear();
+    Navigator.pop(context);
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _pageController.jumpToPage(pageNumber - 1);
+    });
   }
 }
