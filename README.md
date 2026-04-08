@@ -1,16 +1,198 @@
-# Al-Asbahani
+# Al-Asbahani (الأصبهاني)
 
-A quran app designed with **Flutter**.
+A beautiful and feature-rich Quran reading application built with **Flutter**, designed for an optimal reading experience with support for multiple recitation styles.
 
-## Getting Started
+<p align="center">
+  <img src="assets/asbahani-logo.png" alt="Al-Asbahani Logo" width="150" />
+</p>
 
-This project is a starting point for a Flutter application.
+## ✨ Features
 
-A few resources to get you started if this is your first Flutter project:
+- **Complete Quran Display**: All 604 pages rendered in a smooth, swipeable page view
+- **Multiple Recitation Styles (Riwayat)**:
+  - 🕌 **Mushaf King Fahd Complex** - Warsh via Al-Azraq (North African recitation)
+  - 📖 **Al-Asbahani** - Prepared by Ali Saleh (default)
+- **RTL Navigation**: Right-to-left page swiping matching Arabic reading direction
+- **Smart Bookmarks**: Save and quickly access your favorite pages
+- **Last Page Memory**: Automatically resumes where you left off
+- **Surah Index**: Quick navigation to any of the 114 chapters
+- **Search Functionality**: Search ayah text with diacritic-insensitive matching
+- **Hizb & Juz Indicators**: Visual hizb quarter markers in the page header
+- **Screen Wake Lock**: Prevents screen from turning off during reading
+- **Responsive Design**: Adapts beautifully to both portrait and landscape orientations
+- **Arabic Typography**: Custom Amiri and Avenir fonts for authentic Arabic rendering
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 📱 Screenshots
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+<!-- Add screenshots here -->
+<!-- | Portrait | Landscape |
+|----------|-----------|
+| <img src="screenshots/portrait.png" width="250"> | <img src="screenshots/landscape.png" width="250"> | -->
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Flutter SDK (>=3.5.3)
+- Dart SDK (>=3.5.3)
+- Android Studio / VS Code with Flutter extensions
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/asbahani-quran-app.git
+   cd asbahani-quran-app
+   ```
+
+2. **Install dependencies**
+   ```bash
+   flutter pub get
+   ```
+
+3. **Run the app**
+   ```bash
+   flutter run
+   ```
+
+### Building for Production
+
+**Android APK:**
+```bash
+flutter build apk --release
+```
+
+**Android App Bundle:**
+```bash
+flutter build appbundle --release
+```
+
+**iOS:**
+```bash
+flutter build ios --release
+```
+
+## 📂 Project Structure
+
+```
+lib/
+├── main.dart              # Entry point; initializes wakelock & splash screen
+├── quran_app.dart         # Alternative Quran app widget (using flutter_quran package)
+├── data/
+│   └── page_data.dart     # Page metadata model (surah numbers, hizb quarters for 604 pages)
+├── models/
+│   └── chapter.dart       # Chapter model (id, page, name, verse count, type)
+└── screens/
+    ├── quran_screen.dart  # MaterialApp with Arabic theming & font configuration
+    └── quran_page.dart    # Main reading interface with bottom sheet menu
+
+assets/
+├── quran_pages/          # Asbahani recitation page images (604 PNGs)
+├── azrak/                # Azrak recitation page images (604 PNGs)
+├── quran.json            # Complete Quran text with metadata
+├── chapters.json         # 114 surahs with names, verse counts, page numbers
+├── quran.db              # SQLite database (available for future use)
+├── fonts/                # Amiri & Avenir font families
+└── *.png                 # App logos and splash screen assets
+```
+
+## 🛠️ Tech Stack
+
+### Core
+- **Flutter** - Cross-platform UI framework
+- **Dart** - Programming language
+
+### Key Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `al_quran` | Surah metadata lookup by page number |
+| `shared_preferences` | Local storage for bookmarks & preferences |
+| `arabic_font` | Arabic font theming integration |
+| `dartarabic` | Arabic text processing (diacritic removal) |
+| `wakelock_plus` | Keep screen on while reading |
+| `flutter_native_splash` | Custom branded splash screen |
+| `flutter_launcher_icons` | App icon generation |
+
+### Assets
+- **Page Images**: 1,208 high-quality PNG images (604 per recitation style)
+- **Quran Text**: JSON with 6,236 ayahs in Uthmani and Emlaei scripts
+- **Chapters**: Complete surah metadata in Arabic, English, and French
+
+## 📖 Usage Guide
+
+### Navigation
+- **Swipe left/right** to move between pages
+- **Tap anywhere** on the page to open the bottom menu
+
+### Bottom Menu Tabs
+
+1. **السور (Chapters)**: Browse all 114 surahs; tap to jump to any chapter
+2. **البحث (Search)**: Search Quran text (works without diacritics for easier matching)
+3. **العلامات (Bookmarks)**: Access your saved pages
+4. **المصاحف (Recitation Styles)**: Switch between Asbahani and Azrak recitations
+
+### Bookmarks
+- Tap the **bookmark icon** in the page header to save/remove the current page
+- Bookmarked pages show a filled bookmark icon
+
+## ⚙️ Configuration
+
+### App Metadata
+- **App Name**: الأصبهاني (Al-Asbahani)
+- **Package Name**: `com.quran.alasbahani`
+- **Version**: 1.0.0+1
+
+### Customizing the Splash Screen
+
+Edit the `flutter_native_splash` section in `pubspec.yaml`:
+
+```yaml
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/logo.png
+  android_12:
+    image: assets/asbahani-logo.png
+    color: "#FFFFF9"
+    icon_background_color: "#FFFFFF"
+```
+
+Then regenerate:
+```bash
+flutter pub run flutter_native_splash:create
+```
+
+## 🧪 Testing
+
+Run the test suite:
+```bash
+flutter test
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Quran text and page images sourced from verified Islamic resources
+- Amiri font for beautiful Arabic typography
+- The Flutter community for excellent packages and documentation
+
+## 📞 Support
+
+For questions, suggestions, or bug reports, please open an issue on [GitHub](https://github.com/your-username/asbahani-quran-app/issues).
+
+---
+
+**May this app be a source of benefit and guidance. 📿**
