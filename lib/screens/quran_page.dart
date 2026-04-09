@@ -35,33 +35,30 @@ class _JuzHizbTabPageState extends State<_JuzHizbTabPage>
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Column(
-          children: [
-            TabBar(
+    return Material(
+      child: Column(
+        children: [
+          TabBar(
+            controller: _tabController,
+            labelColor: Colors.blue,
+            unselectedLabelColor: Colors.black,
+            indicatorColor: Colors.blue,
+            tabs: const [
+              Tab(text: 'الأجزاء'),
+              Tab(text: 'الأحزاب'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
               controller: _tabController,
-              labelColor: Colors.blue,
-              unselectedLabelColor: Colors.black,
-              indicatorColor: Colors.blue,
-              tabs: const [
-                Tab(text: 'الأجزاء'),
-                Tab(text: 'الأحزاب'),
+              children: [
+                _JuzTabContent(pageController: widget.pageController),
+                _HizbTabContent(pageController: widget.pageController),
               ],
             ),
-            SizedBox(
-              height: constraints.maxHeight - 47,
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _JuzTabContent(pageController: widget.pageController),
-                  _HizbTabContent(pageController: widget.pageController),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 }
