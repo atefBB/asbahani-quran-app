@@ -315,13 +315,16 @@ class _QuranPageState extends State<QuranPage> {
         padding: const EdgeInsets.symmetric(horizontal: 11.0),
         child:
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          DefaultTextStyle(
-            style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black,
-                fontFamily: 'amiri',
-                fontWeight: FontWeight.bold),
-            child: Text(hizb),
+          GestureDetector(
+            onTap: () => _showMenu(context, initialTabIndex: 4),
+            child: DefaultTextStyle(
+              style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.black,
+                  fontFamily: 'amiri',
+                  fontWeight: FontWeight.bold),
+              child: Text(hizb),
+            ),
           ),
           IconButton(
             icon: Icon(isBookmarked(index + 1)
@@ -329,13 +332,16 @@ class _QuranPageState extends State<QuranPage> {
                 : Icons.bookmark_outline),
             onPressed: () => _toggleBookmark(index + 1),
           ),
-          DefaultTextStyle(
-            style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black,
-                fontFamily: 'amiri',
-                fontWeight: FontWeight.bold),
-            child: Text(surahName),
+          GestureDetector(
+            onTap: () => _showMenu(context, initialTabIndex: 0),
+            child: DefaultTextStyle(
+              style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.black,
+                  fontFamily: 'amiri',
+                  fontWeight: FontWeight.bold),
+              child: Text(surahName),
+            ),
           )
         ]));
   }
@@ -398,7 +404,7 @@ class _QuranPageState extends State<QuranPage> {
     );
   }
 
-  void _showMenu(context) {
+  void _showMenu(context, {int initialTabIndex = 0}) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
@@ -406,6 +412,7 @@ class _QuranPageState extends State<QuranPage> {
           textDirection: TextDirection.rtl,
           child: DefaultTabController(
             length: 5,
+            initialIndex: initialTabIndex,
             child: Column(
               children: [
                 const TabBar(
