@@ -200,6 +200,16 @@ class _QuranPageState extends State<QuranPage> {
     await prefs.setInt('lastOpenedPage', pageNumber);
   }
 
+  Future<void> _saveLastTabPanelIndex(int tabIndex) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('lastTabPanelIndex', tabIndex);
+  }
+
+  Future<int> _getLastTabPanelIndex() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('lastTabPanelIndex') ?? 0;
+  }
+
   Future<void> _saveActiveWayIndex(int newActiveWayIndex) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt('activeWayIndex', newActiveWayIndex);
@@ -404,7 +414,9 @@ class _QuranPageState extends State<QuranPage> {
     );
   }
 
-  void _showMenu(context, {int initialTabIndex = 0}) {
+  void _showMenu(context, {int? initialTabIndex}) async {
+    int tabIndex = initialTabIndex ?? await _getLastTabPanelIndex();
+
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
@@ -412,32 +424,44 @@ class _QuranPageState extends State<QuranPage> {
           textDirection: TextDirection.rtl,
           child: DefaultTabController(
             length: 5,
-            initialIndex: initialTabIndex,
-            child: Column(
-              children: [
-                const TabBar(
-                  labelColor: Colors.black,
-                  indicatorColor: Colors.blue,
-                  tabs: [
-                    Tab(text: 'السور'),
-                    Tab(text: 'البحث'),
-                    Tab(text: "العلامات"),
-                    Tab(text: "المصاحف"),
-                    Tab(text: "الأجزاء"),
+            initialIndex: tabIndex,
+            child: Builder(
+              builder: (context) {
+                final tabController = DefaultTabController.of(context);
+
+                tabController.addListener(() {
+                  if (!tabController.indexIsChanging) {
+                    _saveLastTabPanelIndex(tabController.index);
+                  }
+                });
+
+                return Column(
+                  children: [
+                    const TabBar(
+                      labelColor: Colors.black,
+                      indicatorColor: Colors.blue,
+                      tabs: [
+                        Tab(text: 'السور'),
+                        Tab(text: 'البحث'),
+                        Tab(text: "العلامات"),
+                        Tab(text: "المصاحف"),
+                        Tab(text: "الأجزاء"),
+                      ],
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          _chapterTab(context),
+                          _searchTab(context),
+                          _bookmarksTab(context),
+                          _waysTab(context),
+                          _juzHizbTab(context),
+                        ],
+                      ),
+                    ),
                   ],
-                ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      _chapterTab(context),
-                      _searchTab(context),
-                      _bookmarksTab(context),
-                      _waysTab(context),
-                      _juzHizbTab(context),
-                    ],
-                  ),
-                ),
-              ],
+                );
+              },
             ),
           ),
         );
