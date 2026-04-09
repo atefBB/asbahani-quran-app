@@ -3,11 +3,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:dartarabic/dartarabic.dart';
 import 'dart:convert';
-import 'package:flutter/services.dart'; // For loading the JSON file
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:al_quran/al_quran.dart';
+import 'dart:io';
 
 import 'package:asbahani/data/page_data.dart';
+import 'package:asbahani/services/download_manager.dart';
+import 'package:asbahani/screens/download_all_screen.dart';
 
 class _JuzHizbTabPage extends StatefulWidget {
   final dynamic pageController;
@@ -270,18 +273,18 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _pageImageExpandedRow(context, index) {
+    var isAsbahaniWayChoosen = activeWayIndex == 1;
+    var mushafType = isAsbahaniWayChoosen ? 'asbahani' : 'azrak';
     var asbahaniPagePath = 'assets/quran_pages/$index.png';
     var azrakPagePath = 'assets/azrak/$index.png';
-
-    var isAsbahaniWayChoosen = activeWayIndex == 1 ? true : false;
     bool isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
-    return Expanded(
-      child: isLandscape
+    Widget buildImage(ImageProvider provider) {
+      return isLandscape
           ? SingleChildScrollView(
-              child: Image.asset(
-                isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
+              child: Image(
+                image: provider,
                 width: MediaQuery.of(context).size.width,
                 fit: BoxFit.fitWidth,
               ),
@@ -290,17 +293,33 @@ class _QuranPageState extends State<QuranPage> {
               mainAxisSize: MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(
-                  isAsbahaniWayChoosen == true
-                      ? asbahaniPagePath
-                      : azrakPagePath,
+                Image(
+                  image: provider,
                   width: MediaQuery.sizeOf(context).width,
                   height: MediaQuery.sizeOf(context).height,
                   fit: BoxFit.fill,
                 ),
               ],
-            ),
+            );
+    }
+
+    return FutureBuilder<String?>(
+      future: _getLocalImagePath(mushafType, index),
+      builder: (context, snapshot) {
+        if (snapshot.hasData && snapshot.data != null) {
+          return buildImage(FileImage(File(snapshot.data!)));
+        }
+        return buildImage(AssetImage(
+          isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
+        ));
+      },
     );
+  }
+
+  Future<String?> _getLocalImagePath(String mushafType, int page) async {
+    final path = await DownloadManager.getImagePath(mushafType, page);
+    if (File(path).existsSync()) return path;
+    return null;
   }
 
   bool isBookmarked(int page) {
@@ -368,6 +387,7 @@ class _QuranPageState extends State<QuranPage> {
         controller: _pageController,
         onPageChanged: (index) {
           _saveLastOpenedPage(index + 1);
+          _precacheNextPages(index + 1);
         },
         reverse: true, // For RTL navigation
         itemCount: totalPagesNumber,
@@ -473,9 +493,23 @@ class _QuranPageState extends State<QuranPage> {
       itemCount: ways.length,
       itemBuilder: (context, index) {
         final way = ways[index];
+        final mushafType = index == 1 ? 'asbahani' : 'azrak';
 
         return ListTile(
           title: Text('$way'),
+          subtitle: FutureBuilder<bool>(
+            future: DownloadManager.isInitialDownloadComplete(mushafType),
+            builder: (context, snapshot) {
+              if (snapshot.data == true) {
+                return const Text('محمّل ✓', style: TextStyle(color: Colors.green, fontSize: 12));
+              }
+              return const Text('غير محمّل', style: TextStyle(color: Colors.grey, fontSize: 12));
+            },
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: () => _showDownloadDialog(context, mushafType, way),
+          ),
           onTap: () {
             Navigator.pop(context);
             _saveActiveWayIndex(index);
@@ -483,6 +517,46 @@ class _QuranPageState extends State<QuranPage> {
         );
       },
     );
+  }
+
+  void _showDownloadDialog(BuildContext context, String mushafType, String wayName) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تحميل المصحف', textAlign: TextAlign.center),
+        content: Text('هل تريد تحميل $wayName بالكامل؟', textAlign: TextAlign.center),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              Navigator.pop(context);
+              _navigateToDownloadScreen(mushafType, true);
+            },
+            child: const Text('تحميل الكل'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToDownloadScreen(String mushafType, bool downloadAll) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DownloadAllScreen(
+          mushafType: mushafType,
+          downloadAll: downloadAll,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _precacheNextPages(int currentPage) async {
+    final mushafType = activeWayIndex == 1 ? 'asbahani' : 'azrak';
+    DownloadManager.precacheNextPages(mushafType, currentPage);
   }
 
   Widget _bookmarksTab(BuildContext context) {
