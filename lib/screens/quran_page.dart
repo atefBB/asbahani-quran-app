@@ -9,6 +9,135 @@ import 'package:al_quran/al_quran.dart';
 
 import 'package:asbahani/data/page_data.dart';
 
+class _JuzHizbTabPage extends StatefulWidget {
+  final dynamic pageController;
+  const _JuzHizbTabPage({required this.pageController});
+
+  @override
+  State<_JuzHizbTabPage> createState() => _JuzHizbTabPageState();
+}
+
+class _JuzHizbTabPageState extends State<_JuzHizbTabPage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      child: Column(
+        children: [
+          TabBar(
+            controller: _tabController,
+            labelColor: Colors.blue,
+            unselectedLabelColor: Colors.black,
+            indicatorColor: Colors.blue,
+            tabs: const [
+              Tab(text: 'الأجزاء'),
+              Tab(text: 'الأحزاب'),
+            ],
+          ),
+          SizedBox(
+            height: 400,
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _JuzTabContent(pageController: widget.pageController),
+                _HizbTabContent(pageController: widget.pageController),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _JuzTabContent extends StatelessWidget {
+  final dynamic pageController;
+  const _JuzTabContent({required this.pageController});
+
+  @override
+  Widget build(BuildContext context) {
+    final juzMap = <int, int>{};
+    for (int i = 0; i < quranPages.length; i++) {
+      final juz = quranPages[i].juz;
+      if (!juzMap.containsKey(juz)) {
+        juzMap[juz] = i + 1;
+      }
+    }
+
+    return ListView.builder(
+      itemCount: juzMap.length,
+      itemBuilder: (context, index) {
+        final juzNumber = index + 1;
+        final pageNumber = juzMap[juzNumber]!;
+        return ListTile(
+          leading: const Text('جزء', style: TextStyle(fontFamily: 'amiri')),
+          title: Text('$juzNumber'),
+          trailing: Text('ص $pageNumber'),
+          onTap: () {
+            Navigator.pop(context);
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (pageController.hasClients) {
+                pageController.jumpToPage(pageNumber - 1);
+              }
+            });
+          },
+        );
+      },
+    );
+  }
+}
+
+class _HizbTabContent extends StatelessWidget {
+  final dynamic pageController;
+  const _HizbTabContent({required this.pageController});
+
+  @override
+  Widget build(BuildContext context) {
+    final hizbMap = <int, int>{};
+    for (int i = 0; i < quranPages.length; i++) {
+      final hizb = quranPages[i].hizb;
+      if (!hizbMap.containsKey(hizb)) {
+        hizbMap[hizb] = i + 1;
+      }
+    }
+
+    return ListView.builder(
+      itemCount: hizbMap.length,
+      itemBuilder: (context, index) {
+        final hizbNumber = index + 1;
+        final pageNumber = hizbMap[hizbNumber]!;
+        return ListTile(
+          leading: const Text('حزب', style: TextStyle(fontFamily: 'amiri')),
+          title: Text('$hizbNumber'),
+          trailing: Text('ص $pageNumber'),
+          onTap: () {
+            Navigator.pop(context);
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (pageController.hasClients) {
+                pageController.jumpToPage(pageNumber - 1);
+              }
+            });
+          },
+        );
+      },
+    );
+  }
+}
+
 class QuranPage extends StatefulWidget {
   const QuranPage({super.key});
 
@@ -18,9 +147,6 @@ class QuranPage extends StatefulWidget {
 
 class _QuranPageState extends State<QuranPage> {
   TextEditingController searchController = TextEditingController();
-  TextEditingController goToPageController = TextEditingController();
-  TextEditingController juzSearchController = TextEditingController();
-  TextEditingController hizbSearchController = TextEditingController();
   dynamic _pageController;
 
   int totalPagesNumber = 604;
@@ -217,7 +343,7 @@ class _QuranPageState extends State<QuranPage> {
 
   Widget _footerRow(index) {
     return GestureDetector(
-      onLongPress: () => _showQuickGoToPageDialog(context),
+      onTap: () => _showQuickGoToPageDialog(context),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -278,7 +404,7 @@ class _QuranPageState extends State<QuranPage> {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: DefaultTabController(
-            length: 6,
+            length: 5,
             child: Column(
               children: [
                 const TabBar(
@@ -289,7 +415,6 @@ class _QuranPageState extends State<QuranPage> {
                     Tab(text: 'البحث'),
                     Tab(text: "العلامات"),
                     Tab(text: "المصاحف"),
-                    Tab(text: "انتقال"),
                     Tab(text: "الأجزاء"),
                   ],
                 ),
@@ -300,7 +425,6 @@ class _QuranPageState extends State<QuranPage> {
                       _searchTab(context),
                       _bookmarksTab(context),
                       _waysTab(context),
-                      _goToPageTab(context),
                       _juzHizbTab(context),
                     ],
                   ),
@@ -440,62 +564,8 @@ class _QuranPageState extends State<QuranPage> {
     );
   }
 
-  Widget _goToPageTab(BuildContext context) {
-    final currentPage = (_pageController.hasClients && _pageController.page != null)
-        ? _pageController.page!.toInt() + 1
-        : 1;
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          TextField(
-            controller: goToPageController,
-            keyboardType: TextInputType.number,
-            textAlign: TextAlign.center,
-            decoration: InputDecoration(
-              hintText: 'الصفحة الحالية: $currentPage',
-              hintStyle: const TextStyle(fontSize: 16),
-              border: const OutlineInputBorder(),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.arrow_forward),
-                onPressed: () => _goToPage(context),
-              ),
-            ),
-            onSubmitted: (_) => _goToPage(context),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: () => _goToPage(context),
-            child: const Text('انتقل'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _goToPage(BuildContext context) {
-    final input = goToPageController.text.trim();
-    if (input.isEmpty) return;
-
-    final pageNumber = int.tryParse(input);
-    if (pageNumber == null || pageNumber < 1 || pageNumber > totalPagesNumber) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('رقم الصفحة يجب أن يكون بين 1 و $totalPagesNumber'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    goToPageController.clear();
-    Navigator.pop(context);
-
-    Future.delayed(const Duration(milliseconds: 300), () {
-      _pageController.jumpToPage(pageNumber - 1);
-    });
+  Widget _juzHizbTab(BuildContext context) {
+    return _JuzHizbTabPage(pageController: _pageController);
   }
 
   void _showQuickGoToPageDialog(BuildContext context) {
@@ -550,95 +620,6 @@ class _QuranPageState extends State<QuranPage> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _juzHizbTab(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          const TabBar(
-            labelColor: Colors.blue,
-            unselectedLabelColor: Colors.black,
-            indicatorColor: Colors.blue,
-            tabs: [
-              Tab(text: 'الأجزاء'),
-              Tab(text: 'الأحزاب'),
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _juzTab(context),
-                _hizbTab(context),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _juzTab(BuildContext context) {
-    final juzMap = <int, int>{};
-    for (int i = 0; i < quranPages.length; i++) {
-      final juz = quranPages[i].juz;
-      if (!juzMap.containsKey(juz)) {
-        juzMap[juz] = i + 1;
-      }
-    }
-
-    return ListView.builder(
-      itemCount: juzMap.length,
-      itemBuilder: (context, index) {
-        final juzNumber = index + 1;
-        final pageNumber = juzMap[juzNumber]!;
-        return ListTile(
-          leading: const Text('جزء', style: TextStyle(fontFamily: 'amiri')),
-          title: Text('$juzNumber'),
-          trailing: Text('ص $pageNumber'),
-          onTap: () {
-            Navigator.pop(context);
-            Future.delayed(const Duration(milliseconds: 300), () {
-              if (_pageController.hasClients) {
-                _pageController.jumpToPage(pageNumber - 1);
-              }
-            });
-          },
-        );
-      },
-    );
-  }
-
-  Widget _hizbTab(BuildContext context) {
-    final hizbMap = <int, int>{};
-    for (int i = 0; i < quranPages.length; i++) {
-      final hizb = quranPages[i].hizb;
-      if (!hizbMap.containsKey(hizb)) {
-        hizbMap[hizb] = i + 1;
-      }
-    }
-
-    return ListView.builder(
-      itemCount: hizbMap.length,
-      itemBuilder: (context, index) {
-        final hizbNumber = index + 1;
-        final pageNumber = hizbMap[hizbNumber]!;
-        return ListTile(
-          leading: const Text('حزب', style: TextStyle(fontFamily: 'amiri')),
-          title: Text('$hizbNumber'),
-          trailing: Text('ص $pageNumber'),
-          onTap: () {
-            Navigator.pop(context);
-            Future.delayed(const Duration(milliseconds: 300), () {
-              if (_pageController.hasClients) {
-                _pageController.jumpToPage(pageNumber - 1);
-              }
-            });
-          },
-        );
-      },
     );
   }
 }
