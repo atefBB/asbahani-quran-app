@@ -361,38 +361,40 @@ class _QuranPageState extends State<QuranPage> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showMenu(context),
-      child: PageView.builder(
-        controller: _pageController,
-        onPageChanged: (index) {
-          _saveLastOpenedPage(index + 1);
-        },
-        reverse: true, // For RTL navigation
-        itemCount: totalPagesNumber,
-        itemBuilder: (context, index) {
-          return SafeArea(
-            top: true,
-            child: Container(
-              width: MediaQuery.sizeOf(context).width,
-              height: MediaQuery.sizeOf(context).height,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-              ),
-              alignment: const AlignmentDirectional(0, 0),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _headerRow(index),
-                  _pageImageExpandedRow(context, index + 1),
-                  _footerRow(index),
-                ],
-              ),
+    return PageView.builder(
+      controller: _pageController,
+      onPageChanged: (index) {
+        _saveLastOpenedPage(index + 1);
+      },
+      reverse: true, // For RTL navigation
+      itemCount: totalPagesNumber,
+      itemBuilder: (context, index) {
+        return SafeArea(
+          top: true,
+          child: Container(
+            width: MediaQuery.sizeOf(context).width,
+            height: MediaQuery.sizeOf(context).height,
+            decoration: const BoxDecoration(
+              color: Colors.white,
             ),
-          );
-        },
-      ),
+            alignment: const AlignmentDirectional(0, 0),
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _headerRow(index),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _showMenu(context),
+                    child: _pageImageExpandedRow(context, index + 1),
+                  ),
+                ),
+                _footerRow(index),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
