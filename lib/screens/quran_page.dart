@@ -336,7 +336,7 @@ class _QuranPageState extends State<QuranPage> {
     var hizb = _getHizbText(index + 1);
 
     return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 11.0),
+        padding: const EdgeInsets.symmetric(horizontal: 11.0, vertical: 4.0),
         child:
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           GestureDetector(
@@ -373,18 +373,21 @@ class _QuranPageState extends State<QuranPage> {
   Widget _footerRow(index) {
     return GestureDetector(
       onTap: () => _showQuickGoToPageDialog(context),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          DefaultTextStyle(
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            DefaultTextStyle(
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+              child: Text('${index + 1}'),
             ),
-            child: Text('${index + 1}'),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -399,29 +402,24 @@ class _QuranPageState extends State<QuranPage> {
       reverse: true, // For RTL navigation
       itemCount: totalPagesNumber,
       itemBuilder: (context, index) {
-        return SafeArea(
-          top: true,
-          child: Container(
-            width: MediaQuery.sizeOf(context).width,
-            height: MediaQuery.sizeOf(context).height,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-            ),
-            alignment: const AlignmentDirectional(0, 0),
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _headerRow(index),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _showMenu(context),
-                    child: _pageImageWidget(context, index + 1),
-                  ),
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+          ),
+          child: Column(
+            children: [
+              _headerRow(index),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _showMenu(context),
+                  behavior: HitTestBehavior.opaque,
+                  child: _pageImageWidget(context, index + 1),
                 ),
-                _footerRow(index),
-              ],
-            ),
+              ),
+              _footerRow(index),
+            ],
           ),
         );
       },
