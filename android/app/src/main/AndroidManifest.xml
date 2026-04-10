@@ -3,7 +3,8 @@
 	    android:label="الأصبهاني"
         android:name="${applicationName}"
 	    android:roundIcon="@mipmap/ic_launcher"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:largeHeap="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

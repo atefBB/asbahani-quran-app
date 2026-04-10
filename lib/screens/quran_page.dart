@@ -302,35 +302,27 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _imageWidget(String assetPath, BuildContext ctx) {
-    return Image.asset(
-      assetPath,
-      fit: BoxFit.contain,
-      cacheWidth: MediaQuery.sizeOf(ctx).width.toInt(),
-      errorBuilder: (context, error, stackTrace) {
-        return const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.broken_image, size: 48, color: Colors.grey),
-              SizedBox(height: 8),
-              Text(
-                'فشل تحميل الصفحة',
-                style: TextStyle(color: Colors.grey, fontFamily: 'amiri'),
-              ),
-            ],
-          ),
-        );
-      },
-      frameBuilder: (context, child, frame, wasSynchronized) {
-        if (frame == null) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        return AnimatedOpacity(
-          opacity: wasSynchronized ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 200),
-          child: child,
-        );
-      },
+    return RepaintBoundary(
+      child: Image.asset(
+        assetPath,
+        fit: BoxFit.contain,
+        gaplessPlayback: true,
+        errorBuilder: (context, error, stackTrace) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                SizedBox(height: 8),
+                Text(
+                  'فشل تحميل الصفحة',
+                  style: TextStyle(color: Colors.grey, fontFamily: 'amiri'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
