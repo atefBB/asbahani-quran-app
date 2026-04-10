@@ -278,36 +278,60 @@ class _QuranPageState extends State<QuranPage> {
     });
   }
 
+  Widget _pageImageWidget(String assetPath, BuildContext ctx) {
+    return Image.asset(
+      assetPath,
+      fit: BoxFit.contain,
+      cacheWidth: MediaQuery.sizeOf(ctx).width.toInt(),
+      errorBuilder: (context, error, stackTrace) {
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.broken_image, size: 48, color: Colors.grey),
+              SizedBox(height: 8),
+              Text(
+                'فشل تحميل الصفحة',
+                style: TextStyle(color: Colors.grey, fontFamily: 'amiri'),
+              ),
+            ],
+          ),
+        );
+      },
+      frameBuilder: (context, child, frame, wasSynchronized) {
+        if (frame == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return AnimatedOpacity(
+          opacity: wasSynchronized ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 200),
+          child: child,
+        );
+      },
+    );
+  }
+
   Widget _pageImageExpandedRow(context, index) {
     var asbahaniPagePath = 'assets/quran_pages/$index.png';
     var azrakPagePath = 'assets/azrak/$index.png';
 
-    var isAsbahaniWayChoosen = activeWayIndex == 1 ? true : false;
+    var isAsbahaniWayChoosen = activeWayIndex == 1;
     bool isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Expanded(
       child: isLandscape
           ? SingleChildScrollView(
-              child: Image.asset(
+              child: _pageImageWidget(
                 isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
-                width: MediaQuery.of(context).size.width,
-                fit: BoxFit.fitWidth,
+                context,
               ),
             )
-          : Row(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  isAsbahaniWayChoosen == true
-                      ? asbahaniPagePath
-                      : azrakPagePath,
-                  width: MediaQuery.sizeOf(context).width,
-                  height: MediaQuery.sizeOf(context).height,
-                  fit: BoxFit.fill,
-                ),
-              ],
+          : Center(
+              child: _pageImageWidget(
+                isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
+                context,
+              ),
             ),
     );
   }
