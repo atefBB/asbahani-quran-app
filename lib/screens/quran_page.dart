@@ -278,7 +278,30 @@ class _QuranPageState extends State<QuranPage> {
     });
   }
 
-  Widget _pageImageWidget(String assetPath, BuildContext ctx) {
+  Widget _pageImageWidget(context, index) {
+    var asbahaniPagePath = 'assets/quran_pages/$index.png';
+    var azrakPagePath = 'assets/azrak/$index.png';
+
+    var isAsbahaniWayChoosen = activeWayIndex == 1;
+    bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    return isLandscape
+        ? SingleChildScrollView(
+            child: _imageWidget(
+              isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
+              context,
+            ),
+          )
+        : Center(
+            child: _imageWidget(
+              isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
+              context,
+            ),
+          );
+  }
+
+  Widget _imageWidget(String assetPath, BuildContext ctx) {
     return Image.asset(
       assetPath,
       fit: BoxFit.contain,
@@ -308,31 +331,6 @@ class _QuranPageState extends State<QuranPage> {
           child: child,
         );
       },
-    );
-  }
-
-  Widget _pageImageExpandedRow(context, index) {
-    var asbahaniPagePath = 'assets/quran_pages/$index.png';
-    var azrakPagePath = 'assets/azrak/$index.png';
-
-    var isAsbahaniWayChoosen = activeWayIndex == 1;
-    bool isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
-    return Expanded(
-      child: isLandscape
-          ? SingleChildScrollView(
-              child: _pageImageWidget(
-                isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
-                context,
-              ),
-            )
-          : Center(
-              child: _pageImageWidget(
-                isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
-                context,
-              ),
-            ),
     );
   }
 
@@ -426,7 +424,7 @@ class _QuranPageState extends State<QuranPage> {
                 Expanded(
                   child: GestureDetector(
                     onTap: () => _showMenu(context),
-                    child: _pageImageExpandedRow(context, index + 1),
+                    child: _pageImageWidget(context, index + 1),
                   ),
                 ),
                 _footerRow(index),
