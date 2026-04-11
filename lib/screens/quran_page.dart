@@ -287,11 +287,18 @@ class _QuranPageState extends State<QuranPage> {
         MediaQuery.of(context).orientation == Orientation.landscape;
 
     return isLandscape
-        ? SingleChildScrollView(
-            child: _imageWidget(
-              isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
-              context,
-            ),
+        ? LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  child: _imageWidget(
+                    isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
+                    context,
+                  ),
+                ),
+              );
+            },
           )
         : _imageWidget(
             isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
