@@ -44,8 +44,8 @@ class _JuzHizbTabPageState extends State<_JuzHizbTabPage>
             unselectedLabelColor: Colors.black,
             indicatorColor: Colors.blue,
             tabs: const [
-              Tab(text: 'الأجزاء'),
-              Tab(text: 'الأحزاب'),
+              Tab(icon: Icon(Icons.view_list)),
+              Tab(icon: Icon(Icons.grid_view)),
             ],
           ),
           Expanded(
@@ -293,11 +293,9 @@ class _QuranPageState extends State<QuranPage> {
               context,
             ),
           )
-        : Center(
-            child: _imageWidget(
-              isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
-              context,
-            ),
+        : _imageWidget(
+            isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
+            context,
           );
   }
 
@@ -305,7 +303,7 @@ class _QuranPageState extends State<QuranPage> {
     return RepaintBoundary(
       child: Image.asset(
         assetPath,
-        fit: BoxFit.contain,
+        fit: BoxFit.fill,
         gaplessPlayback: true,
         errorBuilder: (context, error, stackTrace) {
           return const Center(
@@ -336,7 +334,7 @@ class _QuranPageState extends State<QuranPage> {
     var hizb = _getHizbText(index + 1);
 
     return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 11.0, vertical: 4.0),
+        padding: const EdgeInsets.all(1.0),
         child:
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           GestureDetector(
@@ -374,7 +372,7 @@ class _QuranPageState extends State<QuranPage> {
     return GestureDetector(
       onTap: () => _showQuickGoToPageDialog(context),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        padding: const EdgeInsets.all(1.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -453,11 +451,11 @@ class _QuranPageState extends State<QuranPage> {
                       labelColor: Colors.black,
                       indicatorColor: Colors.blue,
                       tabs: [
-                        Tab(text: 'السور'),
-                        Tab(text: 'البحث'),
-                        Tab(text: "العلامات"),
-                        Tab(text: "المصاحف"),
-                        Tab(text: "الأجزاء"),
+                        Tab(icon: Icon(Icons.menu_book)),
+                        Tab(icon: Icon(Icons.search)),
+                        Tab(icon: Icon(Icons.bookmark)),
+                        Tab(icon: Icon(Icons.book)),
+                        Tab(icon: Icon(Icons.view_list)),
                       ],
                     ),
                     Expanded(
