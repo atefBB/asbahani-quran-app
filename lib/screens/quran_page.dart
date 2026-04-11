@@ -408,7 +408,10 @@ class _QuranPageState extends State<QuranPage> {
           ),
           child: Column(
             children: [
-              _headerRow(index),
+              SafeArea(
+                bottom: false,
+                child: _headerRow(index),
+              ),
               Expanded(
                 child: GestureDetector(
                   onTap: () => _showMenu(context),
