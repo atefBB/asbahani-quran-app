@@ -5,6 +5,7 @@ import 'package:dartarabic/dartarabic.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart'; // For loading the JSON file
 import 'dart:async';
+
 import 'package:al_quran/al_quran.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -198,6 +199,18 @@ class _QuranPageState extends State<QuranPage> {
     initialization();
   }
 
+  /// Check if an error thrown by the audio player is a network connectivity issue
+  bool _isNetworkError(Object error) {
+    final msg = error.toString().toLowerCase();
+    return msg.contains('socketexception') ||
+        msg.contains('failed host lookup') ||
+        msg.contains('no address associated with hostname') ||
+        msg.contains('network is unreachable') ||
+        msg.contains('connection refused') ||
+        msg.contains('connection timed out') ||
+        msg.contains('unreachable');
+  }
+
   String _buildAyahAudioUrl(int surahNo, int ayahNo) {
     final surahStr = surahNo.toString().padLeft(3, '0');
     final ayahStr = ayahNo.toString().padLeft(3, '0');
@@ -253,7 +266,7 @@ class _QuranPageState extends State<QuranPage> {
         _audioLoadingNotifier.value = false;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('فشل تشغيل الآية: $e'),
+            content: Text(_isNetworkError(e) ? 'لا يوجد اتصال بالإنترنت' : 'فشل تشغيل الآية'),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
@@ -314,9 +327,9 @@ class _QuranPageState extends State<QuranPage> {
           if (mounted) {
             setState(() {});
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('فشل تشغيل تلاوة الصفحة'),
-                duration: Duration(seconds: 2),
+              SnackBar(
+                content: Text(_isNetworkError(e) ? 'لا يوجد اتصال بالإنترنت' : 'فشل تشغيل تلاوة الصفحة'),
+                duration: const Duration(seconds: 2),
                 behavior: SnackBarBehavior.floating,
               ),
             );
@@ -325,7 +338,16 @@ class _QuranPageState extends State<QuranPage> {
       } else {
         // Cached URL also failed, or already tried Aldosary
         _stopPagePlayback();
-        if (mounted) setState(() {});
+        if (mounted) {
+          setState(() {});
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('لا يوجد اتصال بالإنترنت'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     }
   }
