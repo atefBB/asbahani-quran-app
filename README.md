@@ -236,9 +236,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
+## 🤲 وقف لله
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+هذا العمل **وقف لله تعالى**، لا يُباع ولا يُشترى. من استفاد منه فليدعُ لمَن ساهم في إعداده.
+
+This application is a **waqf (endowment) for the sake of Allah** — it is not to be sold or bought. May Allah accept it from all who contributed.
 
 ## 🙏 Acknowledgments
 
