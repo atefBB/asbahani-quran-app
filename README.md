@@ -232,4 +232,13 @@ For questions, suggestions, or bug reports, please open an issue on [GitHub](htt
 
 ---
 
+## 📋 Recent Updates
+
+### March 2025
+
+- **Audio playback reliability**: Fixed race conditions when rapidly switching between verses — playback is now properly stopped before loading a new audio URL, and state updates are guarded against loading transitions to prevent inconsistencies.
+- **Search audio state indicator**: Fixed the search results bottom sheet not showing the playing state (green stop icon / loading spinner) after clicking a verse's play button — the UI now properly reflects playback status by using reactive state notifiers.
+
+---
+
 **May this app be a source of benefit and guidance. 📿**
