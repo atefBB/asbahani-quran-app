@@ -707,6 +707,22 @@ class _QuranPageState extends State<QuranPage> {
                         ],
                       ),
                     ),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                      decoration: const BoxDecoration(
+                        border: Border(top: BorderSide(color: Colors.black12)),
+                      ),
+                      child: const Text(
+                        'وقف لله تعالى',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.black45,
+                          fontFamily: 'amiri',
+                        ),
+                      ),
+                    ),
                   ],
                 );
               },
