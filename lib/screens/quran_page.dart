@@ -155,6 +155,12 @@ class _QuranPageState extends State<QuranPage> {
   final ValueNotifier<bool> _audioLoadingNotifier = ValueNotifier(false);
   StreamSubscription<PlayerState>? _playerStateSubscription;
 
+  // Page recitation state
+  bool _isPlayingPage = false;
+  int? _currentPageNumber;
+  List<dynamic> _pagePlaylist = [];
+  int _currentPagePlayIndex = 0;
+
   static const String _warshBaseUrl = 'https://everyayah.com/data/warsh/warsh_yassin_al_jazaery_64kbps';
 
   @override
@@ -163,7 +169,9 @@ class _QuranPageState extends State<QuranPage> {
     _playerStateSubscription = _audioPlayer.playerStateStream.listen(
       (state) {
         if (state.processingState == ProcessingState.completed) {
-          if (mounted && !_isAudioLoading) {
+          if (_isPlayingPage && mounted) {
+            _playNextPageVerse();
+          } else if (mounted && !_isAudioLoading) {
             setState(() {
               _currentlyPlayingAyahId = null;
               _isAudioLoading = false;
@@ -196,6 +204,11 @@ class _QuranPageState extends State<QuranPage> {
   String _ayahId(int surahNo, int ayahNo) => '$surahNo:$ayahNo';
 
   Future<void> _playAyah(int surahNo, int ayahNo) async {
+    // If page playback is active, stop it and play the single verse
+    if (_isPlayingPage) {
+      _stopPagePlayback();
+    }
+
     final id = _ayahId(surahNo, ayahNo);
 
     if (_currentlyPlayingAyahId == id) {
@@ -242,6 +255,98 @@ class _QuranPageState extends State<QuranPage> {
             behavior: SnackBarBehavior.floating,
           ),
         );
+      }
+    }
+  }
+
+  void _stopPagePlayback() {
+    _isPlayingPage = false;
+    _currentPageNumber = null;
+    _pagePlaylist = [];
+    _currentPagePlayIndex = 0;
+    _currentlyPlayingAyahId = null;
+    _isAudioLoading = false;
+    _currentAyahNotifier.value = null;
+    _audioLoadingNotifier.value = false;
+  }
+
+  Future<void> _playPage(int pageNumber) async {
+    // If already playing this page, stop
+    if (_isPlayingPage && _currentPageNumber == pageNumber) {
+      await _audioPlayer.stop();
+      _stopPagePlayback();
+      if (mounted) setState(() {});
+      return;
+    }
+
+    // Stop any current audio
+    await _audioPlayer.stop();
+
+    // Find all verses on this page
+    final pageVerses = quran.where((ayah) => ayah['page'] == pageNumber).toList();
+    if (pageVerses.isEmpty) return;
+
+    // Reset state and start page playback
+    _isPlayingPage = true;
+    _currentPageNumber = pageNumber;
+    _pagePlaylist = pageVerses;
+    _currentPagePlayIndex = 0;
+
+    if (mounted) setState(() {});
+    _playCurrentPageVerse();
+  }
+
+  void _playCurrentPageVerse() {
+    if (_currentPagePlayIndex >= _pagePlaylist.length) {
+      _stopPagePlayback();
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (!mounted) return;
+
+    final ayah = _pagePlaylist[_currentPagePlayIndex];
+    final surahNo = ayah['sura_no'];
+    final ayahNo = ayah['aya_no'];
+    final id = _ayahId(surahNo, ayahNo);
+
+    setState(() {
+      _currentlyPlayingAyahId = id;
+      _isAudioLoading = true;
+    });
+    _currentAyahNotifier.value = id;
+    _audioLoadingNotifier.value = true;
+
+    _playAudioUrl(surahNo, ayahNo);
+  }
+
+  void _playNextPageVerse() {
+    _currentPagePlayIndex++;
+    _playCurrentPageVerse();
+  }
+
+  Future<void> _playAudioUrl(int surahNo, int ayahNo) async {
+    try {
+      final url = _buildAyahAudioUrl(surahNo, ayahNo);
+      await _audioPlayer.setUrl(url);
+      await _audioPlayer.play();
+      if (mounted) {
+        setState(() {
+          _isAudioLoading = false;
+        });
+        _audioLoadingNotifier.value = false;
+      }
+    } catch (e) {
+      if (_isPlayingPage) {
+        // On error during page playback, skip to next verse
+        _playNextPageVerse();
+      } else if (mounted) {
+        setState(() {
+          _currentlyPlayingAyahId = null;
+          _isAudioLoading = false;
+        });
+        _currentAyahNotifier.value = null;
+        _audioLoadingNotifier.value = false;
       }
     }
   }
@@ -441,6 +546,8 @@ class _QuranPageState extends State<QuranPage> {
     var surahName = DartArabic.stripTashkeel(
         AlQuran.surahDetails.byPageNumber(index + 1).last.name);
     var hizb = _getHizbText(index + 1);
+    final pageNumber = index + 1;
+    final isThisPagePlaying = _isPlayingPage && _currentPageNumber == pageNumber;
 
     return Padding(
         padding: const EdgeInsets.all(1.0),
@@ -457,11 +564,25 @@ class _QuranPageState extends State<QuranPage> {
               child: Text(hizb),
             ),
           ),
-          IconButton(
-            icon: Icon(isBookmarked(index + 1)
-                ? Icons.bookmark
-                : Icons.bookmark_outline),
-            onPressed: () => _toggleBookmark(index + 1),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(
+                  isThisPagePlaying ? Icons.stop_circle : Icons.play_circle_fill,
+                  color: isThisPagePlaying ? Colors.green : Colors.black54,
+                  size: 24,
+                ),
+                onPressed: () => _playPage(pageNumber),
+                tooltip: isThisPagePlaying ? 'إيقاف' : 'تشغيل الصفحة',
+              ),
+              IconButton(
+                icon: Icon(isBookmarked(pageNumber)
+                    ? Icons.bookmark
+                    : Icons.bookmark_outline),
+                onPressed: () => _toggleBookmark(pageNumber),
+              ),
+            ],
           ),
           GestureDetector(
             onTap: () => _showMenu(context, initialTabIndex: 0),
@@ -505,6 +626,10 @@ class _QuranPageState extends State<QuranPage> {
       controller: _pageController,
       onPageChanged: (index) {
         _saveLastOpenedPage(index + 1);
+        if (_isPlayingPage) {
+          _audioPlayer.stop();
+          _stopPagePlayback();
+        }
       },
       reverse: true, // For RTL navigation
       itemCount: totalPagesNumber,
