@@ -13,6 +13,7 @@ A beautiful and feature-rich Quran reading application built with **Flutter**, d
   - 🕌 **Mushaf King Fahd Complex** — Warsh via Al-Azraq (North African recitation)
   - 📖 **Al-Asbahani** — Prepared by Ali Saleh (default)
 - **Verse Audio Playback (Warsh)**: Listen to any verse in Warsh recitation by Yassin Al-Jazaery, streamed directly from EveryAyah.com CDN
+- **Page Recitation**: Play the full-page MP3 audio for any page — uses Abdul Basit Warsh recitation as primary source, with automatic fallback to Ibrahim Aldosary Warsh recitation for any missing pages
 - **RTL Navigation**: Right-to-left page swiping matching Arabic reading direction
 - **Smart Bookmarks**: Save and quickly access your favorite pages
 - **Last Page Memory**: Automatically resumes where you left off
@@ -156,11 +157,21 @@ assets/
 
 ### Audio Playback (Warsh Recitation)
 
+#### Verse Playback
 - Open the **Search** tab and search for a verse
 - Tap the **▶ play button** next to any search result to listen to that verse in Warsh recitation (Yassin Al-Jazaery)
 - Tap the **⏹ stop button** to stop playback
 - A loading spinner appears while audio is buffering
 - Audio is streamed from [EveryAyah.com](https://everyayah.com) CDN — requires internet connection
+
+#### Page Recitation
+
+- Tap the **▶ play button** ▶ in the page header to recite the entire current page
+- The page plays as a single audio file from start to finish
+- Tap the **⏹ stop button** (turns green while playing) to stop
+- Page recitation auto-stops when swiping to a different page
+- **Primary reciter**: Abdul Basit (عبد الباسط) — Warsh recitation
+- **Fallback reciter**: Ibrahim Al-Dosary (إبراهيم الدوسري) — automatically used for pages not available in the primary source
 
 ### Bookmarks
 - Tap the **bookmark icon** in the page header to save/remove the current page
@@ -173,11 +184,21 @@ assets/
 - **Package Name**: `com.quran.alasbahani`
 - **Version**: 1.0.0+1
 
-### Audio Source
+### Audio Sources
+
+#### Single Verse Audio
 - **Reciter**: Yassin Al-Jazaery (ياسين الجزائري)
 - **Recitation Style**: Warsh 'an Nafi' (ورش عن نافع)
 - **CDN**: EveryAyah.com
 - **URL Pattern**: `https://everyayah.com/data/warsh/warsh_yassin_al_jazaery_64kbps/{surah}{ayah}.mp3`
+
+#### Full Page Audio
+- **Primary Reciter**: Abdul Basit (عبد الباسط) — Warsh recitation
+- **Fallback Reciter**: Ibrahim Al-Dosary (إبراهيم الدوسري) — automatically used for unavailable pages
+- **CDN**: EveryAyah.com
+- **URL Pattern**: `https://everyayah.com/data/warsh/warsh_Abdul_Basit_128kbps/PageMp3s/Page{page}.mp3`
+- **Fallback Pattern**: `https://everyayah.com/data/warsh/warsh_ibrahim_aldosary_128kbps/PageMp3s/Page{page}.mp3`
+- The app caches which URL works per page to avoid re-checking on subsequent plays
 
 ### Customizing the Splash Screen
 
@@ -238,6 +259,8 @@ For questions, suggestions, or bug reports, please open an issue on [GitHub](htt
 
 - **Audio playback reliability**: Fixed race conditions when rapidly switching between verses — playback is now properly stopped before loading a new audio URL, and state updates are guarded against loading transitions to prevent inconsistencies.
 - **Search audio state indicator**: Fixed the search results bottom sheet not showing the playing state (green stop icon / loading spinner) after clicking a verse's play button — the UI now properly reflects playback status by using reactive state notifiers.
+- **Page recitation**: Added a play button in the page header to recite the entire page as a single audio file. Uses Abdul Basit Warsh recitation with automatic fallback to Ibrahim Al-Dosary for missing pages.
+- **Page recitation source fix**: Switched from verse-by-verse playback to full-page MP3 files for better listening experience.
 
 ---
 
