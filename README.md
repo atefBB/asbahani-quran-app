@@ -261,6 +261,7 @@ For questions, suggestions, or bug reports, please open an issue on [GitHub](htt
 - **Search audio state indicator**: Fixed the search results bottom sheet not showing the playing state (green stop icon / loading spinner) after clicking a verse's play button — the UI now properly reflects playback status by using reactive state notifiers.
 - **Page recitation**: Added a play button in the page header to recite the entire page as a single audio file. Uses Abdul Basit Warsh recitation with automatic fallback to Ibrahim Al-Dosary for missing pages.
 - **Page recitation source fix**: Switched from verse-by-verse playback to full-page MP3 files for better listening experience.
+- **Offline detection**: Added network connectivity detection — when tapping play buttons without an internet connection, the app now shows a clear "لا يوجد اتصال بالإنترنت" (no internet connection) message instead of a raw error.
 
 ---
 
