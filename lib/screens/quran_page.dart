@@ -158,8 +158,10 @@ class _QuranPageState extends State<QuranPage> {
   // Page recitation state
   bool _isPlayingPage = false;
   int? _currentPageNumber;
-  List<dynamic> _pagePlaylist = [];
-  int _currentPagePlayIndex = 0;
+  final Map<int, String> _pageAudioUrlCache = {};
+
+  static const String _pageBaseAbdulBasit = 'https://everyayah.com/data/warsh/warsh_Abdul_Basit_128kbps/PageMp3s';
+  static const String _pageBaseAldosary = 'https://everyayah.com/data/warsh/warsh_ibrahim_aldosary_128kbps/PageMp3s';
 
   static const String _warshBaseUrl = 'https://everyayah.com/data/warsh/warsh_yassin_al_jazaery_64kbps';
 
@@ -170,7 +172,8 @@ class _QuranPageState extends State<QuranPage> {
       (state) {
         if (state.processingState == ProcessingState.completed) {
           if (_isPlayingPage && mounted) {
-            _playNextPageVerse();
+            // Page audio finished naturally — reset state
+            _stopPagePlayback();
           } else if (mounted && !_isAudioLoading) {
             setState(() {
               _currentlyPlayingAyahId = null;
@@ -262,8 +265,6 @@ class _QuranPageState extends State<QuranPage> {
   void _stopPagePlayback() {
     _isPlayingPage = false;
     _currentPageNumber = null;
-    _pagePlaylist = [];
-    _currentPagePlayIndex = 0;
     _currentlyPlayingAyahId = null;
     _isAudioLoading = false;
     _currentAyahNotifier.value = null;
@@ -279,74 +280,52 @@ class _QuranPageState extends State<QuranPage> {
       return;
     }
 
-    // Stop any current audio
     await _audioPlayer.stop();
 
-    // Find all verses on this page
-    final pageVerses = quran.where((ayah) => ayah['page'] == pageNumber).toList();
-    if (pageVerses.isEmpty) return;
-
-    // Reset state and start page playback
     _isPlayingPage = true;
     _currentPageNumber = pageNumber;
-    _pagePlaylist = pageVerses;
-    _currentPagePlayIndex = 0;
-
     if (mounted) setState(() {});
-    _playCurrentPageVerse();
-  }
 
-  void _playCurrentPageVerse() {
-    if (_currentPagePlayIndex >= _pagePlaylist.length) {
-      _stopPagePlayback();
-      if (mounted) setState(() {});
-      return;
+    final padded = pageNumber.toString().padLeft(3, '0');
+
+    // Use cached URL if available
+    String url;
+    bool hasCachedUrl = _pageAudioUrlCache.containsKey(pageNumber);
+    if (hasCachedUrl) {
+      url = _pageAudioUrlCache[pageNumber]!;
+    } else {
+      url = '$_pageBaseAbdulBasit/Page$padded.mp3';
     }
 
-    if (!mounted) return;
-
-    final ayah = _pagePlaylist[_currentPagePlayIndex];
-    final surahNo = ayah['sura_no'];
-    final ayahNo = ayah['aya_no'];
-    final id = _ayahId(surahNo, ayahNo);
-
-    setState(() {
-      _currentlyPlayingAyahId = id;
-      _isAudioLoading = true;
-    });
-    _currentAyahNotifier.value = id;
-    _audioLoadingNotifier.value = true;
-
-    _playAudioUrl(surahNo, ayahNo);
-  }
-
-  void _playNextPageVerse() {
-    _currentPagePlayIndex++;
-    _playCurrentPageVerse();
-  }
-
-  Future<void> _playAudioUrl(int surahNo, int ayahNo) async {
     try {
-      final url = _buildAyahAudioUrl(surahNo, ayahNo);
       await _audioPlayer.setUrl(url);
       await _audioPlayer.play();
-      if (mounted) {
-        setState(() {
-          _isAudioLoading = false;
-        });
-        _audioLoadingNotifier.value = false;
-      }
-    } catch (e) {
-      if (_isPlayingPage) {
-        // On error during page playback, skip to next verse
-        _playNextPageVerse();
-      } else if (mounted) {
-        setState(() {
-          _currentlyPlayingAyahId = null;
-          _isAudioLoading = false;
-        });
-        _currentAyahNotifier.value = null;
-        _audioLoadingNotifier.value = false;
+      if (!hasCachedUrl) _pageAudioUrlCache[pageNumber] = url;
+    } catch (_) {
+      if (!hasCachedUrl && url.contains('Abdul_Basit')) {
+        // Primary URL failed — try Aldosary fallback
+        final fallbackUrl = '$_pageBaseAldosary/Page$padded.mp3';
+        try {
+          await _audioPlayer.setUrl(fallbackUrl);
+          await _audioPlayer.play();
+          _pageAudioUrlCache[pageNumber] = fallbackUrl;
+        } catch (e) {
+          _stopPagePlayback();
+          if (mounted) {
+            setState(() {});
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('فشل تشغيل تلاوة الصفحة'),
+                duration: Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      } else {
+        // Cached URL also failed, or already tried Aldosary
+        _stopPagePlayback();
+        if (mounted) setState(() {});
       }
     }
   }
