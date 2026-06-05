@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart'; // For loading the JSON file
 import 'dart:async';
 import 'package:al_quran/al_quran.dart';
+import 'package:just_audio/just_audio.dart';
 
 import 'package:asbahani/data/page_data.dart';
 
@@ -147,6 +148,89 @@ class QuranPage extends StatefulWidget {
 class _QuranPageState extends State<QuranPage> {
   TextEditingController searchController = TextEditingController();
   dynamic _pageController;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  String? _currentlyPlayingAyahId; // 'suraNo:ayaNo' identifier
+  bool _isAudioLoading = false;
+  StreamSubscription<PlayerState>? _playerStateSubscription;
+
+  static const String _warshBaseUrl = 'https://everyayah.com/data/warsh/warsh_yassin_al_jazaery_64kbps';
+
+  @override
+  void initState() {
+    super.initState();
+    _playerStateSubscription = _audioPlayer.playerStateStream.listen(
+      (state) {
+        if (state.processingState == ProcessingState.completed) {
+          if (mounted) {
+            setState(() {
+              _currentlyPlayingAyahId = null;
+              _isAudioLoading = false;
+            });
+          }
+        }
+      },
+      onError: (Object e) {
+        if (mounted) {
+          setState(() {
+            _currentlyPlayingAyahId = null;
+            _isAudioLoading = false;
+          });
+        }
+      },
+    );
+    initialization();
+  }
+
+  String _buildAyahAudioUrl(int surahNo, int ayahNo) {
+    final surahStr = surahNo.toString().padLeft(3, '0');
+    final ayahStr = ayahNo.toString().padLeft(3, '0');
+    return '$_warshBaseUrl/$surahStr$ayahStr.mp3';
+  }
+
+  String _ayahId(int surahNo, int ayahNo) => '$surahNo:$ayahNo';
+
+  Future<void> _playAyah(int surahNo, int ayahNo) async {
+    final id = _ayahId(surahNo, ayahNo);
+
+    if (_currentlyPlayingAyahId == id) {
+      await _audioPlayer.stop();
+      setState(() {
+        _currentlyPlayingAyahId = null;
+        _isAudioLoading = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _currentlyPlayingAyahId = id;
+      _isAudioLoading = true;
+    });
+
+    try {
+      final url = _buildAyahAudioUrl(surahNo, ayahNo);
+      await _audioPlayer.setUrl(url);
+      await _audioPlayer.play();
+      if (mounted) {
+        setState(() {
+          _isAudioLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _currentlyPlayingAyahId = null;
+          _isAudioLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل تشغيل الآية: $e'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
   int totalPagesNumber = 604;
   List<dynamic> quran = [];
@@ -160,9 +244,11 @@ class _QuranPageState extends State<QuranPage> {
   int activeWayIndex = 1; // asbahani
 
   @override
-  void initState() {
-    super.initState();
-    initialization();
+  void dispose() {
+    _playerStateSubscription?.cancel();
+    _audioPlayer.dispose();
+    searchController.dispose();
+    super.dispose();
   }
 
   // Load Quran JSON data from assets
@@ -584,9 +670,29 @@ class _QuranPageState extends State<QuranPage> {
       itemCount: searchResults.length,
       itemBuilder: (context, index) {
         final ayah = searchResults[index];
+        final ayahId = _ayahId(ayah["sura_no"], ayah["aya_no"]);
+        final isPlaying = _currentlyPlayingAyahId == ayahId;
+        final isLoading = isPlaying && _isAudioLoading;
         return Column(
           children: [
             ListTile(
+              leading: IconButton(
+                icon: isLoading
+                    ? const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.blue),
+                      )
+                    : Icon(
+                        isPlaying ? Icons.stop_circle : Icons.play_circle_outline,
+                        color: isPlaying ? Colors.green : Colors.grey[600],
+                        size: 28,
+                      ),
+                onPressed: isLoading ? null : () {
+                  _playAyah(ayah["sura_no"], ayah["aya_no"]);
+                },
+                tooltip: isPlaying ? 'إيقاف' : 'استماع',
+              ),
               title: Text(ayah["aya_text_emlaey"].replaceAll('\n', ' '),
                   style: const TextStyle(
                     fontSize: 12,
@@ -598,11 +704,25 @@ class _QuranPageState extends State<QuranPage> {
                     fontSize: 10,
                     color: Colors.black,
                   )),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               onTap: () {
+                final ayahPage = ayah["page"];
+                final surahName = ayah["sura_name_ar"];
+                final ayahNo = ayah["aya_no"];
                 Navigator.of(context).pop();
                 if (_pageController.hasClients) {
-                  _pageController.jumpToPage(ayah["page"] - 1);
+                  _pageController.jumpToPage(ayahPage - 1);
+                  Future.delayed(const Duration(milliseconds: 500), () {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('$surahName - آية $ayahNo'),
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  });
                 }
               },
             ),
