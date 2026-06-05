@@ -1,6 +1,6 @@
 # Al-Asbahani (الأصبهاني)
 
-A beautiful and feature-rich Quran reading application built with **Flutter**, designed for an optimal reading experience with support for multiple recitation styles.
+A beautiful and feature-rich Quran reading application built with **Flutter**, designed for an optimal reading experience with support for multiple recitation styles and Warsh audio playback.
 
 <p align="center">
   <img src="assets/asbahani-logo.png" alt="Al-Asbahani Logo" width="150" />
@@ -10,8 +10,9 @@ A beautiful and feature-rich Quran reading application built with **Flutter**, d
 
 - **Complete Quran Display**: All 604 pages rendered in a smooth, swipeable page view
 - **Multiple Recitation Styles (Riwayat)**:
-  - 🕌 **Mushaf King Fahd Complex** - Warsh via Al-Azraq (North African recitation)
-  - 📖 **Al-Asbahani** - Prepared by Ali Saleh (default)
+  - 🕌 **Mushaf King Fahd Complex** — Warsh via Al-Azraq (North African recitation)
+  - 📖 **Al-Asbahani** — Prepared by Ali Saleh (default)
+- **Verse Audio Playback (Warsh)**: Listen to any verse in Warsh recitation by Yassin Al-Jazaery, streamed directly from EveryAyah.com CDN
 - **RTL Navigation**: Right-to-left page swiping matching Arabic reading direction
 - **Smart Bookmarks**: Save and quickly access your favorite pages
 - **Last Page Memory**: Automatically resumes where you left off
@@ -20,6 +21,7 @@ A beautiful and feature-rich Quran reading application built with **Flutter**, d
 - **Hizb & Juz Indicators**: Visual hizb quarter markers in the page header
 - **Screen Wake Lock**: Prevents screen from turning off during reading
 - **Responsive Design**: Adapts beautifully to both portrait and landscape orientations
+- **Web Support**: Run in any Chromium-based browser (Chrome, Brave, Edge, etc.)
 - **Arabic Typography**: Custom Amiri and Avenir fonts for authentic Arabic rendering
 
 ## 📱 Screenshots
@@ -55,6 +57,19 @@ A beautiful and feature-rich Quran reading application built with **Flutter**, d
    flutter run
    ```
 
+### Running on Web (Chromium)
+
+```bash
+flutter run -d chrome
+```
+
+Or run a local web server and open any browser manually:
+
+```bash
+flutter run -d web-server --web-port=8080
+# Then open http://localhost:8080
+```
+
 ### Building for Production
 
 **Android APK:**
@@ -72,6 +87,11 @@ flutter build appbundle --release
 flutter build ios --release
 ```
 
+**Web:**
+```bash
+flutter build web --release
+```
+
 ## 📂 Project Structure
 
 ```
@@ -84,7 +104,7 @@ lib/
 │   └── chapter.dart       # Chapter model (id, page, name, verse count, type)
 └── screens/
     ├── quran_screen.dart  # MaterialApp with Arabic theming & font configuration
-    └── quran_page.dart    # Main reading interface with bottom sheet menu
+    └── quran_page.dart    # Main reading interface with bottom sheet menu & audio playback
 
 assets/
 ├── quran_pages/          # Asbahani recitation page images (604 PNGs)
@@ -99,8 +119,8 @@ assets/
 ## 🛠️ Tech Stack
 
 ### Core
-- **Flutter** - Cross-platform UI framework
-- **Dart** - Programming language
+- **Flutter** — Cross-platform UI framework
+- **Dart** — Programming language
 
 ### Key Dependencies
 
@@ -108,6 +128,7 @@ assets/
 |---------|---------|
 | `al_quran` | Surah metadata lookup by page number |
 | `shared_preferences` | Local storage for bookmarks & preferences |
+| `just_audio` | Warsh verse audio streaming from CDN |
 | `arabic_font` | Arabic font theming integration |
 | `dartarabic` | Arabic text processing (diacritic removal) |
 | `wakelock_plus` | Keep screen on while reading |
@@ -131,6 +152,15 @@ assets/
 2. **البحث (Search)**: Search Quran text (works without diacritics for easier matching)
 3. **العلامات (Bookmarks)**: Access your saved pages
 4. **المصاحف (Recitation Styles)**: Switch between Asbahani and Azrak recitations
+5. **الجزء والحزب (Juz & Hizb)**: Navigate by juz or hizb
+
+### Audio Playback (Warsh Recitation)
+
+- Open the **Search** tab and search for a verse
+- Tap the **▶ play button** next to any search result to listen to that verse in Warsh recitation (Yassin Al-Jazaery)
+- Tap the **⏹ stop button** to stop playback
+- A loading spinner appears while audio is buffering
+- Audio is streamed from [EveryAyah.com](https://everyayah.com) CDN — requires internet connection
 
 ### Bookmarks
 - Tap the **bookmark icon** in the page header to save/remove the current page
@@ -142,6 +172,12 @@ assets/
 - **App Name**: الأصبهاني (Al-Asbahani)
 - **Package Name**: `com.quran.alasbahani`
 - **Version**: 1.0.0+1
+
+### Audio Source
+- **Reciter**: Yassin Al-Jazaery (ياسين الجزائري)
+- **Recitation Style**: Warsh 'an Nafi' (ورش عن نافع)
+- **CDN**: EveryAyah.com
+- **URL Pattern**: `https://everyayah.com/data/warsh/warsh_yassin_al_jazaery_64kbps/{surah}{ayah}.mp3`
 
 ### Customizing the Splash Screen
 
@@ -186,6 +222,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - Quran text and page images sourced from verified Islamic resources
+- Warsh audio provided by [EveryAyah.com](https://everyayah.com) — Yassin Al-Jazaery recitation
 - Amiri font for beautiful Arabic typography
 - The Flutter community for excellent packages and documentation
 
