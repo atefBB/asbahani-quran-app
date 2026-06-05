@@ -151,6 +151,8 @@ class _QuranPageState extends State<QuranPage> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   String? _currentlyPlayingAyahId; // 'suraNo:ayaNo' identifier
   bool _isAudioLoading = false;
+  final ValueNotifier<String?> _currentAyahNotifier = ValueNotifier(null);
+  final ValueNotifier<bool> _audioLoadingNotifier = ValueNotifier(false);
   StreamSubscription<PlayerState>? _playerStateSubscription;
 
   static const String _warshBaseUrl = 'https://everyayah.com/data/warsh/warsh_yassin_al_jazaery_64kbps';
@@ -166,6 +168,8 @@ class _QuranPageState extends State<QuranPage> {
               _currentlyPlayingAyahId = null;
               _isAudioLoading = false;
             });
+            _currentAyahNotifier.value = null;
+            _audioLoadingNotifier.value = false;
           }
         }
       },
@@ -175,6 +179,8 @@ class _QuranPageState extends State<QuranPage> {
             _currentlyPlayingAyahId = null;
             _isAudioLoading = false;
           });
+          _currentAyahNotifier.value = null;
+          _audioLoadingNotifier.value = false;
         }
       },
     );
@@ -198,6 +204,8 @@ class _QuranPageState extends State<QuranPage> {
         _currentlyPlayingAyahId = null;
         _isAudioLoading = false;
       });
+      _currentAyahNotifier.value = null;
+      _audioLoadingNotifier.value = false;
       return;
     }
 
@@ -205,6 +213,8 @@ class _QuranPageState extends State<QuranPage> {
       _currentlyPlayingAyahId = id;
       _isAudioLoading = true;
     });
+    _currentAyahNotifier.value = id;
+    _audioLoadingNotifier.value = true;
 
     try {
       await _audioPlayer.stop();
@@ -215,6 +225,7 @@ class _QuranPageState extends State<QuranPage> {
         setState(() {
           _isAudioLoading = false;
         });
+        _audioLoadingNotifier.value = false;
       }
     } catch (e) {
       if (mounted) {
@@ -222,6 +233,8 @@ class _QuranPageState extends State<QuranPage> {
           _currentlyPlayingAyahId = null;
           _isAudioLoading = false;
         });
+        _currentAyahNotifier.value = null;
+        _audioLoadingNotifier.value = false;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('فشل تشغيل الآية: $e'),
@@ -248,6 +261,8 @@ class _QuranPageState extends State<QuranPage> {
   void dispose() {
     _playerStateSubscription?.cancel();
     _audioPlayer.dispose();
+    _currentAyahNotifier.dispose();
+    _audioLoadingNotifier.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -667,71 +682,76 @@ class _QuranPageState extends State<QuranPage> {
     if (searchResults.isEmpty) {
       return const Center(child: Text('لم يتم العثور على نتائج'));
     }
-    return ListView.builder(
-      itemCount: searchResults.length,
-      itemBuilder: (context, index) {
-        final ayah = searchResults[index];
-        final ayahId = _ayahId(ayah["sura_no"], ayah["aya_no"]);
-        final isPlaying = _currentlyPlayingAyahId == ayahId;
-        final isLoading = isPlaying && _isAudioLoading;
-        return Column(
-          children: [
-            ListTile(
-              leading: IconButton(
-                icon: isLoading
-                    ? const SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.blue),
-                      )
-                    : Icon(
-                        isPlaying ? Icons.stop_circle : Icons.play_circle_outline,
-                        color: isPlaying ? Colors.green : Colors.grey[600],
-                        size: 28,
-                      ),
-                onPressed: isLoading ? null : () {
-                  _playAyah(ayah["sura_no"], ayah["aya_no"]);
-                },
-                tooltip: isPlaying ? 'إيقاف' : 'استماع',
-              ),
-              title: Text(ayah["aya_text_emlaey"].replaceAll('\n', ' '),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black,
-                  )),
-              subtitle: Text(
-                  '${ayah["sura_name_ar"]} / ص  ${ayah["page"]} / آية ${ayah["aya_no"]}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.black,
-                  )),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              onTap: () {
-                final ayahPage = ayah["page"];
-                final surahName = ayah["sura_name_ar"];
-                final ayahNo = ayah["aya_no"];
-                Navigator.of(context).pop();
-                if (_pageController.hasClients) {
-                  _pageController.jumpToPage(ayahPage - 1);
-                  Future.delayed(const Duration(milliseconds: 500), () {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('$surahName - آية $ayahNo'),
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+    return ListenableBuilder(
+      listenable: Listenable.merge([_currentAyahNotifier, _audioLoadingNotifier]),
+      builder: (context, _) {
+        return ListView.builder(
+          itemCount: searchResults.length,
+          itemBuilder: (context, index) {
+            final ayah = searchResults[index];
+            final ayahId = _ayahId(ayah["sura_no"], ayah["aya_no"]);
+            final isPlaying = _currentAyahNotifier.value == ayahId;
+            final isLoading = isPlaying && _audioLoadingNotifier.value;
+            return Column(
+              children: [
+                ListTile(
+                  leading: IconButton(
+                    icon: isLoading
+                        ? const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.blue),
+                          )
+                        : Icon(
+                            isPlaying ? Icons.stop_circle : Icons.play_circle_outline,
+                            color: isPlaying ? Colors.green : Colors.grey[600],
+                            size: 28,
+                          ),
+                    onPressed: isLoading ? null : () {
+                      _playAyah(ayah["sura_no"], ayah["aya_no"]);
+                    },
+                    tooltip: isPlaying ? 'إيقاف' : 'استماع',
+                  ),
+                  title: Text(ayah["aya_text_emlaey"].replaceAll('\n', ' '),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black,
+                      )),
+                  subtitle: Text(
+                      '${ayah["sura_name_ar"]} / ص  ${ayah["page"]} / آية ${ayah["aya_no"]}',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.black,
+                      )),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  onTap: () {
+                    final ayahPage = ayah["page"];
+                    final surahName = ayah["sura_name_ar"];
+                    final ayahNo = ayah["aya_no"];
+                    Navigator.of(context).pop();
+                    if (_pageController.hasClients) {
+                      _pageController.jumpToPage(ayahPage - 1);
+                      Future.delayed(const Duration(milliseconds: 500), () {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('$surahName - آية $ayahNo'),
+                              duration: const Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      });
                     }
-                  });
-                }
-              },
-            ),
-            const Divider(
-              color: Colors.grey,
-              thickness: 1,
-            ),
-          ],
+                  },
+                ),
+                const Divider(
+                  color: Colors.grey,
+                  thickness: 1,
+                ),
+              ],
+            );
+          },
         );
       },
     );
