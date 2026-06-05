@@ -161,7 +161,7 @@ class _QuranPageState extends State<QuranPage> {
     _playerStateSubscription = _audioPlayer.playerStateStream.listen(
       (state) {
         if (state.processingState == ProcessingState.completed) {
-          if (mounted) {
+          if (mounted && !_isAudioLoading) {
             setState(() {
               _currentlyPlayingAyahId = null;
               _isAudioLoading = false;
@@ -207,6 +207,7 @@ class _QuranPageState extends State<QuranPage> {
     });
 
     try {
+      await _audioPlayer.stop();
       final url = _buildAyahAudioUrl(surahNo, ayahNo);
       await _audioPlayer.setUrl(url);
       await _audioPlayer.play();
