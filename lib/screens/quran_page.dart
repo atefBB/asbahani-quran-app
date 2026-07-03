@@ -782,10 +782,11 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _bookmarksTab(BuildContext context) {
+    final sortedBookmarks = List<int>.from(bookmarks)..sort();
     return ListView.builder(
-      itemCount: bookmarks.length,
+      itemCount: sortedBookmarks.length,
       itemBuilder: (context, index) {
-        final page = bookmarks[index];
+        final page = sortedBookmarks[index];
         return ListTile(
           title: Text('الصفحة $page'),
           onTap: () {
