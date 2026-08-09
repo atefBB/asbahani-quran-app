@@ -4,10 +4,8 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:dartarabic/dartarabic.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart'; // For loading the JSON file
-import 'dart:async';
 
 import 'package:al_quran/al_quran.dart';
-import 'package:just_audio/just_audio.dart';
 
 import 'package:asbahani/data/page_data.dart';
 
@@ -149,207 +147,11 @@ class QuranPage extends StatefulWidget {
 class _QuranPageState extends State<QuranPage> {
   TextEditingController searchController = TextEditingController();
   dynamic _pageController;
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  String? _currentlyPlayingAyahId; // 'suraNo:ayaNo' identifier
-  bool _isAudioLoading = false;
-  final ValueNotifier<String?> _currentAyahNotifier = ValueNotifier(null);
-  final ValueNotifier<bool> _audioLoadingNotifier = ValueNotifier(false);
-  StreamSubscription<PlayerState>? _playerStateSubscription;
-
-  // Page recitation state
-  bool _isPlayingPage = false;
-  int? _currentPageNumber;
-  final Map<int, String> _pageAudioUrlCache = {};
-
-  static const String _pageBaseAbdulBasit = 'https://everyayah.com/data/warsh/warsh_Abdul_Basit_128kbps/PageMp3s';
-  static const String _pageBaseAldosary = 'https://everyayah.com/data/warsh/warsh_ibrahim_aldosary_128kbps/PageMp3s';
-
-  static const String _warshBaseUrl = 'https://everyayah.com/data/warsh/warsh_yassin_al_jazaery_64kbps';
 
   @override
   void initState() {
     super.initState();
-    _playerStateSubscription = _audioPlayer.playerStateStream.listen(
-      (state) {
-        if (state.processingState == ProcessingState.completed) {
-          if (_isPlayingPage && mounted) {
-            // Page audio finished naturally — reset state
-            _stopPagePlayback();
-          } else if (mounted && !_isAudioLoading) {
-            setState(() {
-              _currentlyPlayingAyahId = null;
-              _isAudioLoading = false;
-            });
-            _currentAyahNotifier.value = null;
-            _audioLoadingNotifier.value = false;
-          }
-        }
-      },
-      onError: (Object e) {
-        if (mounted) {
-          setState(() {
-            _currentlyPlayingAyahId = null;
-            _isAudioLoading = false;
-          });
-          _currentAyahNotifier.value = null;
-          _audioLoadingNotifier.value = false;
-        }
-      },
-    );
     initialization();
-  }
-
-  /// Check if an error thrown by the audio player is a network connectivity issue
-  bool _isNetworkError(Object error) {
-    final msg = error.toString().toLowerCase();
-    return msg.contains('socketexception') ||
-        msg.contains('failed host lookup') ||
-        msg.contains('no address associated with hostname') ||
-        msg.contains('network is unreachable') ||
-        msg.contains('connection refused') ||
-        msg.contains('connection timed out') ||
-        msg.contains('unreachable');
-  }
-
-  String _buildAyahAudioUrl(int surahNo, int ayahNo) {
-    final surahStr = surahNo.toString().padLeft(3, '0');
-    final ayahStr = ayahNo.toString().padLeft(3, '0');
-    return '$_warshBaseUrl/$surahStr$ayahStr.mp3';
-  }
-
-  String _ayahId(int surahNo, int ayahNo) => '$surahNo:$ayahNo';
-
-  Future<void> _playAyah(int surahNo, int ayahNo) async {
-    // If page playback is active, stop it and play the single verse
-    if (_isPlayingPage) {
-      _stopPagePlayback();
-    }
-
-    final id = _ayahId(surahNo, ayahNo);
-
-    if (_currentlyPlayingAyahId == id) {
-      await _audioPlayer.stop();
-      setState(() {
-        _currentlyPlayingAyahId = null;
-        _isAudioLoading = false;
-      });
-      _currentAyahNotifier.value = null;
-      _audioLoadingNotifier.value = false;
-      return;
-    }
-
-    setState(() {
-      _currentlyPlayingAyahId = id;
-      _isAudioLoading = true;
-    });
-    _currentAyahNotifier.value = id;
-    _audioLoadingNotifier.value = true;
-
-    try {
-      await _audioPlayer.stop();
-      final url = _buildAyahAudioUrl(surahNo, ayahNo);
-      await _audioPlayer.setUrl(url);
-      await _audioPlayer.play();
-      if (mounted) {
-        setState(() {
-          _isAudioLoading = false;
-        });
-        _audioLoadingNotifier.value = false;
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _currentlyPlayingAyahId = null;
-          _isAudioLoading = false;
-        });
-        _currentAyahNotifier.value = null;
-        _audioLoadingNotifier.value = false;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isNetworkError(e) ? 'لا يوجد اتصال بالإنترنت' : 'فشل تشغيل الآية'),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  void _stopPagePlayback() {
-    _isPlayingPage = false;
-    _currentPageNumber = null;
-    _currentlyPlayingAyahId = null;
-    _isAudioLoading = false;
-    _currentAyahNotifier.value = null;
-    _audioLoadingNotifier.value = false;
-  }
-
-  Future<void> _playPage(int pageNumber) async {
-    // If already playing this page, stop
-    if (_isPlayingPage && _currentPageNumber == pageNumber) {
-      await _audioPlayer.stop();
-      _stopPagePlayback();
-      if (mounted) setState(() {});
-      return;
-    }
-
-    await _audioPlayer.stop();
-
-    _isPlayingPage = true;
-    _currentPageNumber = pageNumber;
-    if (mounted) setState(() {});
-
-    final padded = pageNumber.toString().padLeft(3, '0');
-
-    // Use cached URL if available
-    String url;
-    bool hasCachedUrl = _pageAudioUrlCache.containsKey(pageNumber);
-    if (hasCachedUrl) {
-      url = _pageAudioUrlCache[pageNumber]!;
-    } else {
-      url = '$_pageBaseAbdulBasit/Page$padded.mp3';
-    }
-
-    try {
-      await _audioPlayer.setUrl(url);
-      await _audioPlayer.play();
-      if (!hasCachedUrl) _pageAudioUrlCache[pageNumber] = url;
-    } catch (_) {
-      if (!hasCachedUrl && url.contains('Abdul_Basit')) {
-        // Primary URL failed — try Aldosary fallback
-        final fallbackUrl = '$_pageBaseAldosary/Page$padded.mp3';
-        try {
-          await _audioPlayer.setUrl(fallbackUrl);
-          await _audioPlayer.play();
-          _pageAudioUrlCache[pageNumber] = fallbackUrl;
-        } catch (e) {
-          _stopPagePlayback();
-          if (mounted) {
-            setState(() {});
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_isNetworkError(e) ? 'لا يوجد اتصال بالإنترنت' : 'فشل تشغيل تلاوة الصفحة'),
-                duration: const Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        }
-      } else {
-        // Cached URL also failed, or already tried Aldosary
-        _stopPagePlayback();
-        if (mounted) {
-          setState(() {});
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('لا يوجد اتصال بالإنترنت'),
-              duration: Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    }
   }
 
   int totalPagesNumber = 604;
@@ -365,10 +167,6 @@ class _QuranPageState extends State<QuranPage> {
 
   @override
   void dispose() {
-    _playerStateSubscription?.cancel();
-    _audioPlayer.dispose();
-    _currentAyahNotifier.dispose();
-    _audioLoadingNotifier.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -548,7 +346,6 @@ class _QuranPageState extends State<QuranPage> {
         AlQuran.surahDetails.byPageNumber(index + 1).last.name);
     var hizb = _getHizbText(index + 1);
     final pageNumber = index + 1;
-    final isThisPagePlaying = _isPlayingPage && _currentPageNumber == pageNumber;
 
     return Padding(
         padding: const EdgeInsets.all(1.0),
@@ -565,25 +362,11 @@ class _QuranPageState extends State<QuranPage> {
               child: Text(hizb),
             ),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(
-                  isThisPagePlaying ? Icons.stop_circle : Icons.play_circle_fill,
-                  color: isThisPagePlaying ? Colors.green : Colors.black54,
-                  size: 24,
-                ),
-                onPressed: () => _playPage(pageNumber),
-                tooltip: isThisPagePlaying ? 'إيقاف' : 'تشغيل الصفحة',
-              ),
-              IconButton(
-                icon: Icon(isBookmarked(pageNumber)
-                    ? Icons.bookmark
-                    : Icons.bookmark_outline),
-                onPressed: () => _toggleBookmark(pageNumber),
-              ),
-            ],
+          IconButton(
+            icon: Icon(isBookmarked(pageNumber)
+                ? Icons.bookmark
+                : Icons.bookmark_outline),
+            onPressed: () => _toggleBookmark(pageNumber),
           ),
           GestureDetector(
             onTap: () => _showMenu(context, initialTabIndex: 0),
@@ -627,10 +410,6 @@ class _QuranPageState extends State<QuranPage> {
       controller: _pageController,
       onPageChanged: (index) {
         _saveLastOpenedPage(index + 1);
-        if (_isPlayingPage) {
-          _audioPlayer.stop();
-          _stopPagePlayback();
-        }
       },
       reverse: true, // For RTL navigation
       itemCount: totalPagesNumber,
@@ -825,76 +604,51 @@ class _QuranPageState extends State<QuranPage> {
     if (searchResults.isEmpty) {
       return const Center(child: Text('لم يتم العثور على نتائج'));
     }
-    return ListenableBuilder(
-      listenable: Listenable.merge([_currentAyahNotifier, _audioLoadingNotifier]),
-      builder: (context, _) {
-        return ListView.builder(
-          itemCount: searchResults.length,
-          itemBuilder: (context, index) {
-            final ayah = searchResults[index];
-            final ayahId = _ayahId(ayah["sura_no"], ayah["aya_no"]);
-            final isPlaying = _currentAyahNotifier.value == ayahId;
-            final isLoading = isPlaying && _audioLoadingNotifier.value;
-            return Column(
-              children: [
-                ListTile(
-                  leading: IconButton(
-                    icon: isLoading
-                        ? const SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.blue),
-                          )
-                        : Icon(
-                            isPlaying ? Icons.stop_circle : Icons.play_circle_outline,
-                            color: isPlaying ? Colors.green : Colors.grey[600],
-                            size: 28,
-                          ),
-                    onPressed: isLoading ? null : () {
-                      _playAyah(ayah["sura_no"], ayah["aya_no"]);
-                    },
-                    tooltip: isPlaying ? 'إيقاف' : 'استماع',
-                  ),
-                  title: Text(ayah["aya_text_emlaey"].replaceAll('\n', ' '),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black,
-                      )),
-                  subtitle: Text(
-                      '${ayah["sura_name_ar"]} / ص  ${ayah["page"]} / آية ${ayah["aya_no"]}',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Colors.black,
-                      )),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                  onTap: () {
-                    final ayahPage = ayah["page"];
-                    final surahName = ayah["sura_name_ar"];
-                    final ayahNo = ayah["aya_no"];
-                    Navigator.of(context).pop();
-                    if (_pageController.hasClients) {
-                      _pageController.jumpToPage(ayahPage - 1);
-                      Future.delayed(const Duration(milliseconds: 500), () {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('$surahName - آية $ayahNo'),
-                              duration: const Duration(seconds: 2),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      });
+    return ListView.builder(
+      itemCount: searchResults.length,
+      itemBuilder: (context, index) {
+        final ayah = searchResults[index];
+        return Column(
+          children: [
+            ListTile(
+              title: Text(ayah["aya_text_emlaey"].replaceAll('\n', ' '),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black,
+                  )),
+              subtitle: Text(
+                  '${ayah["sura_name_ar"]} / ص  ${ayah["page"]} / آية ${ayah["aya_no"]}',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.black,
+                  )),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              onTap: () {
+                final ayahPage = ayah["page"];
+                final surahName = ayah["sura_name_ar"];
+                final ayahNo = ayah["aya_no"];
+                Navigator.of(context).pop();
+                if (_pageController.hasClients) {
+                  _pageController.jumpToPage(ayahPage - 1);
+                  Future.delayed(const Duration(milliseconds: 500), () {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('$surahName - آية $ayahNo'),
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     }
-                  },
-                ),
-                const Divider(
-                  color: Colors.grey,
-                  thickness: 1,
-                ),
-              ],
-            );
-          },
+                  });
+                }
+              },
+            ),
+            const Divider(
+              color: Colors.grey,
+              thickness: 1,
+            ),
+          ],
         );
       },
     );

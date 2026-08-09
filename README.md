@@ -129,7 +129,6 @@ assets/
 |---------|---------|
 | `al_quran` | Surah metadata lookup by page number |
 | `shared_preferences` | Local storage for bookmarks & preferences |
-| `just_audio` | Warsh verse audio streaming from CDN |
 | `arabic_font` | Arabic font theming integration |
 | `dartarabic` | Arabic text processing (diacritic removal) |
 | `wakelock_plus` | Keep screen on while reading |
