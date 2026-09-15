@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:dartarabic/dartarabic.dart';
@@ -286,7 +287,7 @@ class _QuranPageState extends State<QuranPage> {
 
   Widget _pageImageWidget(context, index) {
     var asbahaniPagePath = 'assets/quran_pages/$index.png';
-    var azrakPagePath = 'assets/azrak/$index.png';
+    var azrakPagePath = 'assets/azrak/$index.svg';
 
     var isAsbahaniWayChoosen = activeWayIndex == 1;
     bool isLandscape =
@@ -313,27 +314,34 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _imageWidget(String assetPath, BuildContext ctx) {
-    return RepaintBoundary(
-      child: Image.asset(
-        assetPath,
-        fit: BoxFit.fill,
-        gaplessPlayback: true,
-        errorBuilder: (context, error, stackTrace) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.broken_image, size: 48, color: Colors.grey),
-                SizedBox(height: 8),
-                Text(
-                  'فشل تحميل الصفحة',
-                  style: TextStyle(color: Colors.grey, fontFamily: 'amiri'),
-                ),
-              ],
-            ),
-          );
-        },
+    final svg = assetPath.endsWith('.svg');
+    Widget placeholder = const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.broken_image, size: 48, color: Colors.grey),
+          SizedBox(height: 8),
+          Text(
+            'فشل تحميل الصفحة',
+            style: TextStyle(color: Colors.grey, fontFamily: 'amiri'),
+          ),
+        ],
       ),
+    );
+
+    return RepaintBoundary(
+      child: svg
+          ? SvgPicture.asset(
+              assetPath,
+              fit: BoxFit.fill,
+              placeholderBuilder: (_) => placeholder,
+            )
+          : Image.asset(
+              assetPath,
+              fit: BoxFit.fill,
+              gaplessPlayback: true,
+              errorBuilder: (context, error, stackTrace) => placeholder,
+            ),
     );
   }
 
