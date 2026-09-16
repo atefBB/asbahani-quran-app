@@ -331,10 +331,33 @@ class _QuranPageState extends State<QuranPage> {
 
     return RepaintBoundary(
       child: svg
-          ? SvgPicture.asset(
-              assetPath,
-              fit: BoxFit.fill,
-              placeholderBuilder: (_) => placeholder,
+          ? LayoutBuilder(
+              builder: (context, constraints) {
+                Widget svgWidget;
+                if (constraints.hasBoundedWidth &&
+                    constraints.hasBoundedHeight) {
+                  svgWidget = SizedBox(
+                    width: constraints.maxWidth,
+                    height: constraints.maxHeight,
+                    child: SvgPicture.asset(
+                      assetPath,
+                      fit: BoxFit.fill,
+                    ),
+                  );
+                } else if (constraints.hasBoundedWidth) {
+                  svgWidget = SvgPicture.asset(
+                    assetPath,
+                    fit: BoxFit.fill,
+                    width: constraints.maxWidth,
+                  );
+                } else {
+                  svgWidget = SvgPicture.asset(
+                    assetPath,
+                    fit: BoxFit.fill,
+                  );
+                }
+                return svgWidget;
+              },
             )
           : Image.asset(
               assetPath,
