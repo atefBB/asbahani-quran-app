@@ -162,6 +162,7 @@ class _QuranPageState extends State<QuranPage> {
   List<int> bookmarks = [];
   List<String> ayahBookmarks = [];
   final Map<int, AyahPageGeometry> _ayahGeometryCache = {};
+  final List<String> _svgWarmPaths = [];
   List ways = [
     "مصحف مجمع الملك فهد (ورش من طريق الأزرق)",
     "مصحف الأصبهاني إعداد علي صالح"
@@ -390,8 +391,30 @@ class _QuranPageState extends State<QuranPage> {
       _pageController
           .jumpToPage(lastOpenedPage - 1); // Page starts from 0, so subtract 1
 
+      _prefetchNeighbors(lastOpenedPage);
+
       FlutterNativeSplash.remove();
     });
+  }
+
+  // Pre-decode neighbor pages so swiping shows them without a delay.
+  void _prefetchNeighbors(int page) {
+    setState(() {
+      _svgWarmPaths.clear();
+      _prefetchPage(page - 1);
+      _prefetchPage(page + 1);
+    });
+  }
+
+  void _prefetchPage(int page) {
+    if (page < 1 || page > totalPagesNumber) return;
+    if (activeWayIndex == 1) {
+      precacheImage(AssetImage('assets/quran_pages/$page.png'), context);
+    } else {
+      final path = 'assets/azrak/$page.svg';
+      rootBundle.load(path); // warm the asset bytes
+      _svgWarmPaths.add(path);
+    }
   }
 
   Widget _pageImageWidget(BuildContext context, int page) {
@@ -576,6 +599,7 @@ class _QuranPageState extends State<QuranPage> {
       controller: _pageController,
       onPageChanged: (index) {
         _saveLastOpenedPage(index + 1);
+        _prefetchNeighbors(index + 1);
       },
       reverse: true, // For RTL navigation
       itemCount: totalPagesNumber,
@@ -586,20 +610,33 @@ class _QuranPageState extends State<QuranPage> {
           decoration: const BoxDecoration(
             color: Colors.white,
           ),
-          child: Column(
+          child: Stack(
             children: [
-              SafeArea(
-                bottom: false,
-                child: _headerRow(index),
+              Column(
+                children: [
+                  SafeArea(
+                    bottom: false,
+                    child: _headerRow(index),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _showMenu(context),
+                      behavior: HitTestBehavior.opaque,
+                      child: _pageImageWidget(context, index + 1),
+                    ),
+                  ),
+                  _footerRow(index),
+                ],
               ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => _showMenu(context),
-                  behavior: HitTestBehavior.opaque,
-                  child: _pageImageWidget(context, index + 1),
-                ),
-              ),
-              _footerRow(index),
+              // Invisible decoy SVG loads for neighboring pages: this triggers
+              // flutter_svg's cache so the real page appears instantly.
+              ..._svgWarmPaths.map((path) => Positioned(
+                    left: 0,
+                    top: 0,
+                    width: 1,
+                    height: 1,
+                    child: Opacity(opacity: 0, child: SvgPicture.asset(path)),
+                  )),
             ],
           ),
         );
