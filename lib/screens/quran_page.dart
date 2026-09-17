@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart'; // For loading the JSON file
 
 import 'package:asbahani/data/page_data.dart';
+import 'package:asbahani/data/ayah_geometry.dart';
 
 class _JuzHizbTabPage extends StatefulWidget {
   final dynamic pageController;
@@ -159,6 +160,8 @@ class _QuranPageState extends State<QuranPage> {
   List quranPagesIndex = [];
   List searchResults = [];
   List<int> bookmarks = [];
+  List<String> ayahBookmarks = [];
+  final Map<int, AyahPageGeometry> _ayahGeometryCache = {};
   List ways = [
     "مصحف مجمع الملك فهد (ورش من طريق الأزرق)",
     "مصحف الأصبهاني إعداد علي صالح"
@@ -202,6 +205,7 @@ class _QuranPageState extends State<QuranPage> {
     bookmarks =
         prefs.getStringList('bookmarks')?.map((e) => int.parse(e)).toList() ??
             [];
+    ayahBookmarks = prefs.getStringList('ayahBookmarks') ?? [];
     setState(() {});
   }
 
@@ -243,6 +247,102 @@ class _QuranPageState extends State<QuranPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(
         'bookmarks', bookmarks.map((e) => e.toString()).toList());
+  }
+
+  Future<void> _saveAyahBookmarks() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('ayahBookmarks', ayahBookmarks);
+  }
+
+  void _toggleAyahBookmark(int surah, int ayah) {
+    final key = '$surah:$ayah';
+    final added = !ayahBookmarks.contains(key);
+    setState(() {
+      if (added) {
+        ayahBookmarks.add(key);
+      } else {
+        ayahBookmarks.remove(key);
+      }
+      _saveAyahBookmarks();
+    });
+    final surahName = _chapterName(surah);
+    final message = added
+        ? 'تم حفظ الآية ${_arabicDigits('$ayah')} من $surahName'
+        : 'تم إزالة الآية من المحفوظات';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, textAlign: TextAlign.center),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _arabicDigits(String input) {
+    const map = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    return input.split('').map((c) {
+      final i = c.codeUnitAt(0) - 48;
+      return (i >= 0 && i <= 9) ? map[i] : c;
+    }).join();
+  }
+
+  String _chapterName(int surah) {
+    try {
+      final chapter = chapters
+          .cast<Map<String, dynamic>>()
+          .firstWhere((c) => c['id'] == surah);
+      return DartArabic.stripTashkeel(chapter['name_ar'] as String);
+    } catch (_) {
+      return 'سورة $surah';
+    }
+  }
+
+  int? _pageOfAyah(int surah, int ayah) {
+    for (int i = 0; i < quranPagesIndex.length; i++) {
+      final segments = quranPagesIndex[i] as List;
+      for (final seg in segments) {
+        final s = (seg as List)[0] as int;
+        final start = seg[1] as int;
+        final end = seg[2] as int;
+        if (s == surah && ayah >= start && ayah <= end) {
+          return i + 1;
+        }
+      }
+    }
+    for (final item in quran) {
+      if (item['sura_no'] == surah && item['aya_no'] == ayah) {
+        return item['page'];
+      }
+    }
+    return null;
+  }
+
+  Future<AyahPageGeometry?> _ayahGeometryFor(int page) async {
+    final cached = _ayahGeometryCache[page];
+    if (cached != null) {
+      return cached;
+    }
+    try {
+      final geometry = await AyahPageGeometry.load(page);
+      _ayahGeometryCache[page] = geometry;
+      return geometry;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _handleAyahLongPress(
+      int page, Offset position, Size size) async {
+    if (activeWayIndex == 1) return; // asbahani pages have no ayah polygons
+    if (size.width <= 0 || size.height <= 0) return;
+    final geometry = await _ayahGeometryFor(page);
+    if (geometry == null || !mounted) return;
+    final x = geometry.viewBox.left + position.dx / (size.width / geometry.viewBox.width);
+    final y = geometry.viewBox.top + position.dy / (size.height / geometry.viewBox.height);
+    final hit = geometry.findAt(x, y);
+    if (hit != null) {
+      _toggleAyahBookmark(hit.surah, hit.ayah);
+    }
   }
 
   void _toggleBookmark(int page) {
@@ -294,9 +394,9 @@ class _QuranPageState extends State<QuranPage> {
     });
   }
 
-  Widget _pageImageWidget(context, index) {
-    var asbahaniPagePath = 'assets/quran_pages/$index.png';
-    var azrakPagePath = 'assets/azrak/$index.svg';
+  Widget _pageImageWidget(BuildContext context, int page) {
+    var asbahaniPagePath = 'assets/quran_pages/$page.png';
+    var azrakPagePath = 'assets/azrak/$page.svg';
 
     var isAsbahaniWayChoosen = activeWayIndex == 1;
     bool isLandscape =
@@ -311,6 +411,7 @@ class _QuranPageState extends State<QuranPage> {
                   child: _imageWidget(
                     isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
                     context,
+                    page,
                   ),
                 ),
               );
@@ -319,10 +420,11 @@ class _QuranPageState extends State<QuranPage> {
         : _imageWidget(
             isAsbahaniWayChoosen ? asbahaniPagePath : azrakPagePath,
             context,
+            page,
           );
   }
 
-  Widget _imageWidget(String assetPath, BuildContext ctx) {
+  Widget _imageWidget(String assetPath, BuildContext ctx, int page) {
     final svg = assetPath.endsWith('.svg');
     Widget placeholder = const Center(
       child: Column(
@@ -365,7 +467,16 @@ class _QuranPageState extends State<QuranPage> {
                     fit: BoxFit.fill,
                   );
                 }
-                return svgWidget;
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onLongPressStart: (details) {
+                    final effectiveSize = context.size ??
+                        Size(constraints.maxWidth, constraints.maxHeight);
+                    _handleAyahLongPress(
+                        page, details.localPosition, effectiveSize);
+                  },
+                  child: svgWidget,
+                );
               },
             )
           : Image.asset(
@@ -617,18 +728,70 @@ class _QuranPageState extends State<QuranPage> {
 
   Widget _bookmarksTab(BuildContext context) {
     final sortedBookmarks = List<int>.from(bookmarks)..sort();
-    return ListView.builder(
-      itemCount: sortedBookmarks.length,
-      itemBuilder: (context, index) {
-        final page = sortedBookmarks[index];
-        return ListTile(
-          title: Text('الصفحة $page'),
-          onTap: () {
-            Navigator.pop(context);
-            _pageController.jumpToPage(page - 1);
-          },
-        );
-      },
+    final sortedAyahBookmarks = List<String>.from(ayahBookmarks)..sort((a, b) {
+        final aParts = a.split(':').map(int.parse).toList();
+        final bParts = b.split(':').map(int.parse).toList();
+        return aParts[0] != bParts[0]
+            ? aParts[0] - bParts[0]
+            : aParts[1] - bParts[1];
+      });
+
+    if (sortedBookmarks.isEmpty && sortedAyahBookmarks.isEmpty) {
+      return const Center(child: Text('لا توجد محفوظات بعد'));
+    }
+
+    return ListView(
+      children: [
+        if (sortedBookmarks.isNotEmpty) ...[
+          _bookmarkSectionHeader('الصفحات المحفوظة'),
+          ...sortedBookmarks.map((page) {
+            return ListTile(
+              title: Text('الصفحة ${_arabicDigits('$page')}'),
+              onTap: () {
+                Navigator.pop(context);
+                _pageController.jumpToPage(page - 1);
+              },
+            );
+          }),
+        ],
+        if (sortedAyahBookmarks.isNotEmpty) ...[
+          _bookmarkSectionHeader('الآيات المحفوظة'),
+          ...sortedAyahBookmarks.map((key) {
+            final parts = key.split(':');
+            final surah = int.parse(parts[0]);
+            final ayah = int.parse(parts[1]);
+            final page = _pageOfAyah(surah, ayah);
+            return ListTile(
+              leading: const Icon(Icons.bookmark, size: 20),
+              title: Text('الآية ${_arabicDigits('$ayah')} - ${_chapterName(surah)}'),
+              subtitle: page != null
+                  ? Text('صفحة ${_arabicDigits('$page')}')
+                  : null,
+              onTap: () {
+                Navigator.pop(context);
+                if (page != null && _pageController.hasClients) {
+                  _pageController.jumpToPage(page - 1);
+                }
+              },
+            );
+          }),
+        ],
+      ],
+    );
+  }
+
+  Widget _bookmarkSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+          color: Colors.black54,
+          fontFamily: 'amiri',
+        ),
+      ),
     );
   }
 
