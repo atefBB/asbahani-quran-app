@@ -34,16 +34,12 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  al_quran: ^0.1.1+5
   shared_preferences: ^2.3.2
   flutter_native_splash: ^2.4.1
   arabic_font: ^0.0.9
-  quran_controller: ^1.6.8
   package_rename: ^1.7.1
-  flutter_quran: ^0.0.1+1
   dartarabic: ^0.1.2
   flutter_launcher_icons: ^0.14.1
-  quran: ^1.3.1
   wakelock_plus: ^1.2.8
   flutter_svg: ^2.0.10+1
 
@@ -97,6 +93,7 @@ flutter:
     - assets/quran.json
     - assets/quran.db
     - assets/chapters.json
+    - assets/quran-pages-index.json
 
   fonts:
     - family: amiri

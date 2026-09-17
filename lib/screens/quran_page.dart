@@ -6,8 +6,6 @@ import 'package:dartarabic/dartarabic.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart'; // For loading the JSON file
 
-import 'package:al_quran/al_quran.dart';
-
 import 'package:asbahani/data/page_data.dart';
 
 class _JuzHizbTabPage extends StatefulWidget {
@@ -158,6 +156,7 @@ class _QuranPageState extends State<QuranPage> {
   int totalPagesNumber = 604;
   List<dynamic> quran = [];
   List chapters = [];
+  List quranPagesIndex = [];
   List searchResults = [];
   List<int> bookmarks = [];
   List ways = [
@@ -186,6 +185,15 @@ class _QuranPageState extends State<QuranPage> {
     final List<dynamic> rawData = await jsonDecode(response);
     setState(() {
       chapters = rawData.toList();
+    });
+  }
+
+  Future<void> _loadQuranPagesIndex() async {
+    final String response =
+        await rootBundle.loadString('assets/quran-pages-index.json');
+    final Map<String, dynamic> data = await jsonDecode(response);
+    setState(() {
+      quranPagesIndex = data['pages'] as List;
     });
   }
 
@@ -271,6 +279,7 @@ class _QuranPageState extends State<QuranPage> {
 
     _loadQuranData();
     _loadQuranChapters();
+    _loadQuranPagesIndex();
     _loadBookmarks();
 
     // Load the last opened page after the first frame
@@ -372,9 +381,24 @@ class _QuranPageState extends State<QuranPage> {
     return bookmarks.contains(page);
   }
 
+  String _quranHeaderSurahName(int page) {
+    if (quranPagesIndex.length < page || chapters.isEmpty) {
+      return '';
+    }
+    try {
+      final lastSurahNumber =
+          (quranPagesIndex[page - 1].last as List)[0] as int;
+      final chapter = chapters
+          .cast<Map<String, dynamic>>()
+          .firstWhere((c) => c['id'] == lastSurahNumber);
+      return DartArabic.stripTashkeel(chapter['name_ar'] as String);
+    } catch (_) {
+      return '';
+    }
+  }
+
   Widget _headerRow(index) {
-    var surahName = DartArabic.stripTashkeel(
-        AlQuran.surahDetails.byPageNumber(index + 1).last.name);
+    var surahName = _quranHeaderSurahName(index + 1);
     var hizb = _getHizbText(index + 1);
     final pageNumber = index + 1;
 
