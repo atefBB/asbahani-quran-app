@@ -533,15 +533,16 @@ class _QuranPageState extends State<QuranPage> {
                   return gestureWidget;
                 }
                 return Stack(
-                  fit: StackFit.expand,
                   children: [
                     gestureWidget,
-                    IgnorePointer(
-                      child: CustomPaint(
-                        painter: AyahHighlightPainter(
-                          geometry: _highlightGeometry!,
-                          surah: highlight.$1,
-                          ayah: highlight.$2,
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: CustomPaint(
+                          painter: AyahHighlightPainter(
+                            geometry: _highlightGeometry!,
+                            surah: highlight.$1,
+                            ayah: highlight.$2,
+                          ),
                         ),
                       ),
                     ),
