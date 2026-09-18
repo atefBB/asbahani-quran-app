@@ -41,4 +41,22 @@ void main() {
     final empty = g.pathFor(999, 999, const Size(400, 600));
     expect(empty.computeMetrics().isEmpty, isTrue);
   });
+
+  test('roundedPolygonPath cuts each square corner', () {
+    const square = [
+      Offset(0, 0),
+      Offset(100, 0),
+      Offset(100, 100),
+      Offset(0, 100),
+    ];
+    final rounded = roundedPolygonPath(square, 10);
+    expect(rounded.computeMetrics().isNotEmpty, isTrue);
+    // The corner point must be cut away by the fillet...
+    expect(rounded.contains(const Offset(0, 0)), isFalse);
+    // ...while the center of the band must stay covered.
+    expect(rounded.contains(const Offset(50, 50)), isTrue);
+    // Without rounding, the unmodified polygon still covers the corner.
+    expect(
+        roundedPolygonPath(square, 0).contains(const Offset(0, 0)), isTrue);
+  });
 }

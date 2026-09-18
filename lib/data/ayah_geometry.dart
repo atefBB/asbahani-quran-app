@@ -155,42 +155,95 @@ class AyahPageGeometry {
   }
 }
 
-/// Fill + outline overlay used to highlight a bookmarked ayah on the page.
+/// Rounds every corner of a polygon by replacing each vertex with a smooth
+/// quadratic fillet of [radius] px, giving a "border-radius" look on the
+/// irregular ayah shapes.
+Path roundedPolygonPath(List<Offset> pts, double radius) {
+  final path = Path();
+  final n = pts.length;
+  if (n < 3 || radius <= 0) {
+    path.addPolygon(pts, true);
+    return path;
+  }
+
+  Offset unitIn(int i) {
+    final prev = pts[(i - 1 + n) % n];
+    final cur = pts[i];
+    final d = (cur - prev).distance;
+    return d <= 0 ? Offset.zero : (cur - prev) / d;
+  }
+
+  Offset unitOut(int i) {
+    final cur = pts[i];
+    final next = pts[(i + 1) % n];
+    final d = (next - cur).distance;
+    return d <= 0 ? Offset.zero : (next - cur) / d;
+  }
+
+  final startPoints = <Offset>[];
+  final endPoints = <Offset>[];
+  for (var i = 0; i < n; i++) {
+    final inLen = (pts[i] - pts[(i - 1 + n) % n]).distance;
+    final outLen = (pts[(i + 1) % n] - pts[i]).distance;
+    final r = radius.clamp(0.0, inLen / 2).clamp(0.0, outLen / 2);
+    startPoints.add(pts[i] - unitIn(i) * r);
+    endPoints.add(pts[i] + unitOut(i) * r);
+  }
+
+  path.moveTo(startPoints[0].dx, startPoints[0].dy);
+  for (var i = 0; i < n; i++) {
+    path.lineTo(endPoints[i].dx, endPoints[i].dy);
+    final next = (i + 1) % n;
+    path.quadraticBezierTo(
+      pts[next].dx,
+      pts[next].dy,
+      startPoints[next].dx,
+      startPoints[next].dy,
+    );
+  }
+  path.close();
+  return path;
+}
+
+/// Fill + (border-free) rounded overlay used to highlight a bookmarked ayah.
 class AyahHighlightPainter extends CustomPainter {
   final AyahPageGeometry geometry;
   final int surah;
   final int ayah;
+  final double cornerRadius;
 
   const AyahHighlightPainter({
     required this.geometry,
     required this.surah,
     required this.ayah,
+    this.cornerRadius = 6,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final path = geometry.pathFor(surah, ayah, size);
-    if (path.computeMetrics().isEmpty) return;
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = const Color(0x40FBC02D) // translucent amber fill
-        ..style = PaintingStyle.fill
-        ..isAntiAlias = true,
-    );
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = const Color(0xCCF9A825)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..isAntiAlias = true,
-    );
+    final ayahGeo = geometry.findAyah(surah, ayah);
+    if (ayahGeo == null || size.width <= 0 || size.height <= 0) return;
+    final paint = Paint()
+      ..color = const Color(0x40FBC02D)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+    for (final polygon in ayahGeo.polygons) {
+      final screen = polygon
+          .map((p) => Offset(
+                (p.dx - geometry.viewBox.left) / geometry.viewBox.width *
+                    size.width,
+                (p.dy - geometry.viewBox.top) / geometry.viewBox.height *
+                    size.height,
+              ))
+          .toList();
+      canvas.drawPath(roundedPolygonPath(screen, cornerRadius), paint);
+    }
   }
 
   @override
   bool shouldRepaint(AyahHighlightPainter oldDelegate) =>
       oldDelegate.geometry != geometry ||
       oldDelegate.surah != surah ||
-      oldDelegate.ayah != ayah;
+      oldDelegate.ayah != ayah ||
+      oldDelegate.cornerRadius != cornerRadius;
 }
