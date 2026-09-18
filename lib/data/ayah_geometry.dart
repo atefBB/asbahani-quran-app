@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 /// Geometry of a single ayah on a page: one or more polygons (subpaths)
@@ -49,6 +50,15 @@ class AyahPageGeometry {
     for (final ayah in ayahs) {
       if (ayah.contains(x, y)) {
         return ayah;
+      }
+    }
+    return null;
+  }
+
+  AyahGeometry? findAyah(int surah, int ayah) {
+    for (final a in ayahs) {
+      if (a.surah == surah && a.ayah == ayah) {
+        return a;
       }
     }
     return null;
@@ -121,4 +131,66 @@ class AyahPageGeometry {
     }
     return polygons;
   }
+
+  /// Screen-space [Path] of the given ayah, mapping the viewBox onto [size]
+  /// the same way `BoxFit.fill` renders the SVG.
+  Path pathFor(int surah, int ayah, Size size) {
+    final path = Path();
+    final ayahGeo = findAyah(surah, ayah);
+    if (ayahGeo == null || size.width <= 0 || size.height <= 0) {
+      return path;
+    }
+    for (final polygon in ayahGeo.polygons) {
+      path.addPolygon(
+        polygon
+            .map((p) => Offset(
+                  (p.dx - viewBox.left) / viewBox.width * size.width,
+                  (p.dy - viewBox.top) / viewBox.height * size.height,
+                ))
+            .toList(),
+        true,
+      );
+    }
+    return path;
+  }
+}
+
+/// Fill + outline overlay used to highlight a bookmarked ayah on the page.
+class AyahHighlightPainter extends CustomPainter {
+  final AyahPageGeometry geometry;
+  final int surah;
+  final int ayah;
+
+  const AyahHighlightPainter({
+    required this.geometry,
+    required this.surah,
+    required this.ayah,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = geometry.pathFor(surah, ayah, size);
+    if (path.computeMetrics().isEmpty) return;
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0x40FBC02D) // translucent amber fill
+        ..style = PaintingStyle.fill
+        ..isAntiAlias = true,
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xCCF9A825)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..isAntiAlias = true,
+    );
+  }
+
+  @override
+  bool shouldRepaint(AyahHighlightPainter oldDelegate) =>
+      oldDelegate.geometry != geometry ||
+      oldDelegate.surah != surah ||
+      oldDelegate.ayah != ayah;
 }

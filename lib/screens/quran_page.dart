@@ -163,6 +163,9 @@ class _QuranPageState extends State<QuranPage> {
   List<String> ayahBookmarks = [];
   final Map<int, AyahPageGeometry> _ayahGeometryCache = {};
   final List<String> _svgWarmPaths = [];
+  int? _highlightAyahPage;
+  String? _highlightAyahKey;
+  AyahPageGeometry? _highlightGeometry;
   List ways = [
     "مصحف مجمع الملك فهد (ورش من طريق الأزرق)",
     "مصحف الأصبهاني إعداد علي صالح"
@@ -255,7 +258,7 @@ class _QuranPageState extends State<QuranPage> {
     await prefs.setStringList('ayahBookmarks', ayahBookmarks);
   }
 
-  void _toggleAyahBookmark(int surah, int ayah) {
+  bool _toggleAyahBookmark(int surah, int ayah) {
     final key = '$surah:$ayah';
     final added = !ayahBookmarks.contains(key);
     setState(() {
@@ -277,6 +280,34 @@ class _QuranPageState extends State<QuranPage> {
         behavior: SnackBarBehavior.floating,
       ),
     );
+    return added;
+  }
+
+  void _setAyahHighlight(int page, int surah, int ayah, AyahPageGeometry geometry) {
+    setState(() {
+      _highlightAyahPage = page;
+      _highlightAyahKey = '$surah:$ayah';
+      _highlightGeometry = geometry;
+    });
+  }
+
+  void _clearAyahHighlight() {
+    setState(() {
+      _highlightAyahPage = null;
+      _highlightAyahKey = null;
+      _highlightGeometry = null;
+    });
+  }
+
+  (int, int)? _highlightFor(int page) {
+    if (_highlightAyahPage != page ||
+        _highlightAyahKey == null ||
+        _highlightGeometry == null ||
+        activeWayIndex == 1) {
+      return null;
+    }
+    final parts = _highlightAyahKey!.split(':');
+    return (int.parse(parts[0]), int.parse(parts[1]));
   }
 
   String _arabicDigits(String input) {
@@ -342,7 +373,12 @@ class _QuranPageState extends State<QuranPage> {
     final y = geometry.viewBox.top + position.dy / (size.height / geometry.viewBox.height);
     final hit = geometry.findAt(x, y);
     if (hit != null) {
-      _toggleAyahBookmark(hit.surah, hit.ayah);
+      final added = _toggleAyahBookmark(hit.surah, hit.ayah);
+      if (added) {
+        _setAyahHighlight(page, hit.surah, hit.ayah, geometry);
+      } else {
+        _clearAyahHighlight();
+      }
     }
   }
 
@@ -490,7 +526,8 @@ class _QuranPageState extends State<QuranPage> {
                     fit: BoxFit.fill,
                   );
                 }
-                return GestureDetector(
+                final highlight = _highlightFor(page);
+                final gestureWidget = GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onLongPressStart: (details) {
                     final effectiveSize = context.size ??
@@ -499,6 +536,24 @@ class _QuranPageState extends State<QuranPage> {
                         page, details.localPosition, effectiveSize);
                   },
                   child: svgWidget,
+                );
+                if (highlight == null) {
+                  return gestureWidget;
+                }
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    gestureWidget,
+                    IgnorePointer(
+                      child: CustomPaint(
+                        painter: AyahHighlightPainter(
+                          geometry: _highlightGeometry!,
+                          surah: highlight.$1,
+                          ayah: highlight.$2,
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               },
             )
@@ -600,6 +655,9 @@ class _QuranPageState extends State<QuranPage> {
       onPageChanged: (index) {
         _saveLastOpenedPage(index + 1);
         _prefetchNeighbors(index + 1);
+        if (_highlightAyahPage != null && _highlightAyahPage != index + 1) {
+          _clearAyahHighlight();
+        }
       },
       reverse: true, // For RTL navigation
       itemCount: totalPagesNumber,
@@ -763,6 +821,17 @@ class _QuranPageState extends State<QuranPage> {
     );
   }
 
+  Future<void> _jumpToAyah(int page, int surah, int ayah) async {
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(page - 1);
+    }
+    final geometry = await _ayahGeometryFor(page);
+    if (!mounted || geometry == null) return;
+    final key = '$surah:$ayah';
+    if (!ayahBookmarks.contains(key)) return;
+    _setAyahHighlight(page, surah, ayah, geometry);
+  }
+
   Widget _bookmarksTab(BuildContext context) {
     final sortedBookmarks = List<int>.from(bookmarks)..sort();
     final sortedAyahBookmarks = List<String>.from(ayahBookmarks)..sort((a, b) {
@@ -806,8 +875,8 @@ class _QuranPageState extends State<QuranPage> {
                   : null,
               onTap: () {
                 Navigator.pop(context);
-                if (page != null && _pageController.hasClients) {
-                  _pageController.jumpToPage(page - 1);
+                if (page != null) {
+                  _jumpToAyah(page, surah, ayah);
                 }
               },
             );

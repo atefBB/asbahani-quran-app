@@ -33,4 +33,12 @@ void main() {
     // bottom edge of page 1 has no ayah polygon areas in the sample
     expect(ayah, isNull);
   });
+
+  test('pathFor maps an ayah to screen space for highlight overlay', () async {
+    final g = await AyahPageGeometry.load(1);
+    final path = g.pathFor(1, 1, const Size(400, 600));
+    expect(path.computeMetrics().isNotEmpty, isTrue);
+    final empty = g.pathFor(999, 999, const Size(400, 600));
+    expect(empty.computeMetrics().isEmpty, isTrue);
+  });
 }
