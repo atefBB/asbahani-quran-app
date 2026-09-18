@@ -271,7 +271,7 @@ class _QuranPageState extends State<QuranPage> {
     });
     final surahName = _chapterName(surah);
     final message = added
-        ? 'تم حفظ الآية ${_arabicDigits('$ayah')} من $surahName'
+        ? 'تم حفظ الآية $ayah من $surahName'
         : 'تم إزالة الآية من المحفوظات';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -308,14 +308,6 @@ class _QuranPageState extends State<QuranPage> {
     }
     final parts = _highlightAyahKey!.split(':');
     return (int.parse(parts[0]), int.parse(parts[1]));
-  }
-
-  String _arabicDigits(String input) {
-    const map = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    return input.split('').map((c) {
-      final i = c.codeUnitAt(0) - 48;
-      return (i >= 0 && i <= 9) ? map[i] : c;
-    }).join();
   }
 
   String _chapterName(int surah) {
@@ -662,11 +654,16 @@ class _QuranPageState extends State<QuranPage> {
       reverse: true, // For RTL navigation
       itemCount: totalPagesNumber,
       itemBuilder: (context, index) {
+        // Azrak SVGs are transparent, so a soft blue page tint shows through
+        // and is easier on the eyes; asbahani PNGs already carry their own
+        // white background.
+        final pageBackground =
+            activeWayIndex == 0 ? const Color(0xFFDCEAF7) : Colors.white;
         return Container(
           width: double.infinity,
           height: double.infinity,
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: pageBackground,
           ),
           child: Stack(
             children: [
@@ -852,7 +849,7 @@ class _QuranPageState extends State<QuranPage> {
           _bookmarkSectionHeader('الصفحات المحفوظة'),
           ...sortedBookmarks.map((page) {
             return ListTile(
-              title: Text('الصفحة ${_arabicDigits('$page')}'),
+              title: Text('الصفحة $page'),
               onTap: () {
                 Navigator.pop(context);
                 _pageController.jumpToPage(page - 1);
@@ -869,9 +866,9 @@ class _QuranPageState extends State<QuranPage> {
             final page = _pageOfAyah(surah, ayah);
             return ListTile(
               leading: const Icon(Icons.bookmark, size: 20),
-              title: Text('الآية ${_arabicDigits('$ayah')} - ${_chapterName(surah)}'),
+              title: Text('الآية $ayah - ${_chapterName(surah)}'),
               subtitle: page != null
-                  ? Text('صفحة ${_arabicDigits('$page')}')
+                  ? Text('صفحة $page')
                   : null,
               onTap: () {
                 Navigator.pop(context);
