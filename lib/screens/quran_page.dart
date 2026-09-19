@@ -368,7 +368,6 @@ class _QuranPageState extends State<QuranPage> {
       final added = _toggleAyahBookmark(hit.surah, hit.ayah);
       if (added) {
         _setAyahHighlight(page, hit.surah, hit.ayah, geometry);
-        _showMenu(context, initialTabIndex: 2);
       } else {
         _clearAyahHighlight();
       }
