@@ -59,27 +59,4 @@ void main() {
     expect(
         roundedPolygonPath(square, 0).contains(const Offset(0, 0)), isTrue);
   });
-
-  test('surah-start pages give the first ayah its full top line', () async {
-    for (final page in [77, 282]) {
-      final g = await AyahPageGeometry.load(page);
-      // the first ayah of the page now spans the full page text width
-      final first = g.findAt(170, 174); // middle of the first text line
-      expect(first, isNotNull, reason: 'page $page top-line press should hit');
-      final hitFirst = first!;
-      expect(hitFirst.surah, g.ayahs.first.surah);
-      expect(hitFirst.ayah, g.ayahs.first.ayah);
-    }
-  });
-
-  test('surah-start repair keeps short-ayah rows intact (page 604)', () async {
-    final g = await AyahPageGeometry.load(604);
-    // Al-Ikhlas: 3 short ayahs share one line; pressing the middle part must
-    // still resolve to ayah 2, not ayah 1.
-    final ayah2 = g.findAt(172, 104);
-    expect(ayah2, isNotNull);
-    final hit = ayah2!;
-    expect(hit.surah, 112);
-    expect(hit.ayah, 2);
-  });
 }

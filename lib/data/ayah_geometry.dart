@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
@@ -8,9 +6,9 @@ import 'package:flutter/services.dart';
 class AyahGeometry {
   final int surah;
   final int ayah;
-  List<List<Offset>> polygons;
+  final List<List<Offset>> polygons;
 
-  AyahGeometry({
+  const AyahGeometry({
     required this.surah,
     required this.ayah,
     required this.polygons,
@@ -90,85 +88,7 @@ class AyahPageGeometry {
         polygons: _parsePath(d),
       ));
     }
-    _applySurahStartRepair(ayahs);
     return AyahPageGeometry(viewBox: viewBox, ayahs: ayahs);
-  }
-
-  /// The azrak SVG data chops the first ayah of a surah-start page down to
-  /// just the right part of its first line and gives the leftover of that line
-  /// (and the rows below) to the following ayah. This repair gives the first
-  /// ayah the whole top line and removes that split segment from the next
-  /// ayah, so long-pressing anywhere on the first line of such a page
-  /// bookmarks/highlights the first ayah correctly.
-  static void _applySurahStartRepair(List<AyahGeometry> ayahs) {
-    if (ayahs.length < 2) return;
-    final first = ayahs[0];
-    final second = ayahs[1];
-
-    double minX = double.infinity, maxX = -double.infinity;
-    for (final a in ayahs) {
-      for (final p in a.polygons) {
-        for (final o in p) {
-          if (o.dx < minX) minX = o.dx;
-          if (o.dx > maxX) maxX = o.dx;
-        }
-      }
-    }
-    final fullWidth = maxX - minX;
-    if (fullWidth <= 0) return;
-
-    final firstTopY = _minRowTop(first);
-    double fmin = double.infinity, fmax = -double.infinity;
-    for (final p in first.polygons) {
-      if (!_onRow(p, firstTopY)) continue;
-      for (final o in p) {
-        if (o.dx < fmin) fmin = o.dx;
-        if (o.dx > fmax) fmax = o.dx;
-      }
-    }
-    if (fmax - fmin >= 0.9 * fullWidth) return; // first ayah is already full-width
-
-    final secondRowTops = <double>{};
-    for (final p in second.polygons) {
-      var top = double.infinity;
-      for (final o in p) {
-        if (o.dy < top) top = o.dy;
-      }
-      secondRowTops.add(top);
-    }
-    if (secondRowTops.length < 2) return; // short-ayah pages must stay untouched
-    final secondTopY = secondRowTops.reduce(math.min);
-    if ((secondTopY - firstTopY).abs() > 1e-6) return; // doesn't share the top row
-
-    final topRowBottom = second.polygons
-        .where((p) => _onRow(p, secondTopY))
-        .expand((p) => p)
-        .map((o) => o.dy)
-        .where((y) => y - secondTopY > 1e-6)
-        .reduce(math.min);
-
-    first.polygons.add([
-      Offset(minX, firstTopY),
-      Offset(maxX, firstTopY),
-      Offset(maxX, topRowBottom),
-      Offset(minX, topRowBottom),
-    ]);
-
-    second.polygons =
-        second.polygons.where((p) => !_onRow(p, secondTopY)).toList();
-  }
-
-  static bool _onRow(List<Offset> polygon, double rowTop) =>
-      polygon.any((o) => (o.dy - rowTop).abs() < 1e-6);
-
-  static double _minRowTop(AyahGeometry ayah) {
-    var top = double.infinity;
-    for (final p in ayah.polygons) {
-      for (final o in p) {
-        if (o.dy < top) top = o.dy;
-      }
-    }
-    return top;
   }
 
   static List<List<Offset>> _parsePath(String d) {
