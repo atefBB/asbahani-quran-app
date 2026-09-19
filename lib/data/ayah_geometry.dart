@@ -316,7 +316,7 @@ class AyahHighlightPainter extends CustomPainter {
                     size.height,
               ))
           .toList();
-      canvas.drawPath(roundedPolygonPath(screen, cornerRadius), paint);
+      canvas.drawPath(Path()..addPolygon(screen, true), paint);
     }
   }
 
