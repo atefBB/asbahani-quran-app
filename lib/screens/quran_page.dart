@@ -830,6 +830,12 @@ class _QuranPageState extends State<QuranPage> {
     _setAyahHighlight(page, surah, ayah, geometry);
   }
 
+  Future<void> _highlightSearchResult(int page, int surah, int ayah) async {
+    final geometry = await _ayahGeometryFor(page);
+    if (!mounted || geometry == null) return;
+    _setAyahHighlight(page, surah, ayah, geometry);
+  }
+
   Widget _bookmarksTab(BuildContext context) {
     final sortedBookmarks = List<int>.from(bookmarks)..sort();
     final sortedAyahBookmarks = List<String>.from(ayahBookmarks)..sort((a, b) {
@@ -947,11 +953,13 @@ class _QuranPageState extends State<QuranPage> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               onTap: () {
                 final ayahPage = ayah["page"];
+                final surahNo = ayah["sura_no"];
                 final surahName = ayah["sura_name_ar"];
                 final ayahNo = ayah["aya_no"];
                 Navigator.of(context).pop();
                 if (_pageController.hasClients) {
                   _pageController.jumpToPage(ayahPage - 1);
+                  _highlightSearchResult(ayahPage, surahNo, ayahNo);
                   Future.delayed(const Duration(milliseconds: 500), () {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
