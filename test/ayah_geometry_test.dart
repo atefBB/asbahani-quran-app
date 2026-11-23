@@ -23,7 +23,7 @@ void main() {
   test('JSON hit layer matches the polygons embedded in the SVGs', () async {
     // The hit layer is now loaded from `assets/warsh_json`, while the SVGs in
     // `assets/azrak` remain the display artwork. Their polygons must agree.
-    for (final page in [1, 2, 3, 15, 106, 604]) {
+    for (final page in [1, 2, 3, 15, 106, 300, 604]) {
       final fromJson = await AyahPageGeometry.load(page);
       final svg = await rootBundle.loadString('assets/azrak/$page.svg');
       final fromSvg = AyahPageGeometry.parse(svg);
