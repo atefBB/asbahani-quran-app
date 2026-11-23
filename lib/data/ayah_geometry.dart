@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
@@ -46,6 +48,10 @@ class AyahPageGeometry {
 
   const AyahPageGeometry({required this.viewBox, required this.ayahs});
 
+  static const String _jsonDir = 'assets/warsh_json';
+  static const String _viewBoxesAsset = '$_jsonDir/viewboxes.json';
+  static Map<String, Rect>? _viewBoxCache;
+
   AyahGeometry? findAt(double x, double y) {
     for (final ayah in ayahs) {
       if (ayah.contains(x, y)) {
@@ -64,13 +70,60 @@ class AyahPageGeometry {
     return null;
   }
 
-  static Future<AyahPageGeometry> load(int page) async {
-    final svg = await rootBundle.loadString('assets/azrak/$page.svg');
-    return parse(svg);
+  /// Loads the ayah hit layer from the per-page JSON published alongside the
+  /// Warsh/KFQC SVG pages. [viewboxes.json] keeps the exact `viewBox` used by
+  /// each local SVG so screen coordinates still line up with the artwork.
+  static Future<AyahPageGeometry> load(int page) =>
+      loadKey(page.toString().padLeft(3, '0'));
+
+  /// Same as [load], but accepts keys such as `106-surah4` for the
+  /// surah-specific page variants shipped upstream.
+  static Future<AyahPageGeometry> loadKey(String key) async {
+    final viewBox = (await _viewBoxes())[key];
+    if (viewBox == null) {
+      throw StateError('No viewBox entry for ayah layer "$key".');
+    }
+    final source = await rootBundle.loadString('$_jsonDir/$key.json');
+    return fromJson(source, viewBox: viewBox);
   }
 
+  static AyahPageGeometry fromJson(String source, {required Rect viewBox}) {
+    final decoded = jsonDecode(source) as List<dynamic>;
+    final ayahs = <AyahGeometry>[];
+    for (final entry in decoded) {
+      final data = entry as Map<String, dynamic>;
+      ayahs.add(AyahGeometry(
+        surah: (data['surahNumber'] as num).toInt(),
+        ayah: (data['ayahNumber'] as num).toInt(),
+        polygons: parsePolygon(data['polygon'] as String),
+      ));
+    }
+    return AyahPageGeometry(viewBox: viewBox, ayahs: ayahs);
+  }
+
+  /// Reads a page's `viewBox` values once, instead of parsing the full SVG.
+  static Future<Map<String, Rect>> _viewBoxes() async {
+    final cached = _viewBoxCache;
+    if (cached != null) return cached;
+    final decoded = jsonDecode(await rootBundle.loadString(_viewBoxesAsset))
+        as Map<String, dynamic>;
+    final result = <String, Rect>{};
+    decoded.forEach((key, value) {
+      final parts = value as List<dynamic>;
+      result[key] = Rect.fromLTWH(
+        (parts[0] as num).toDouble(),
+        (parts[1] as num).toDouble(),
+        (parts[2] as num).toDouble(),
+        (parts[3] as num).toDouble(),
+      );
+    });
+    return _viewBoxCache = result;
+  }
+
+  /// Legacy SVG parser, kept so tests can verify that the JSON layer and the
+  /// polygons embedded in the SVGs stay identical.
   static AyahPageGeometry parse(String svg) {
-    final vbMatch = RegExp(r'viewBox="([-0-9. ]+)"').firstMatch(svg);
+    final vbMatch = RegExp(r'viewBox="([-0-9.eE ]+)"').firstMatch(svg);
     final vbParts = vbMatch!.group(1)!.trim().split(RegExp(r'\s+')).map(double.parse).toList();
     final viewBox =
         Rect.fromLTWH(vbParts[0], vbParts[1], vbParts[2], vbParts[3]);
@@ -85,10 +138,29 @@ class AyahPageGeometry {
       ayahs.add(AyahGeometry(
         surah: surah,
         ayah: ayah,
-        polygons: _parsePath(d),
+        polygons: parsePolygon(d),
       ));
     }
     return AyahPageGeometry(viewBox: viewBox, ayahs: ayahs);
+  }
+
+  /// Upstream JSON uses two polygon encodings: `M/L/Z` paths, and bare
+  /// `x,y x,y ...` point lists on the first two pages.
+  static List<List<Offset>> parsePolygon(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return const <List<Offset>>[];
+    if (trimmed.startsWith('M')) return _parsePath(trimmed);
+    return <List<Offset>>[_parseCoordinatePairs(trimmed)];
+  }
+
+  static List<Offset> _parseCoordinatePairs(String value) {
+    return RegExp(r'(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)')
+        .allMatches(value)
+        .map((m) => Offset(
+              double.parse(m.group(1)!),
+              double.parse(m.group(2)!),
+            ))
+        .toList();
   }
 
   static List<List<Offset>> _parsePath(String d) {

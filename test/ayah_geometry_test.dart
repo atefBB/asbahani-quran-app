@@ -20,6 +20,47 @@ void main() {
     }
   });
 
+  test('JSON hit layer matches the polygons embedded in the SVGs', () async {
+    // The hit layer is now loaded from `assets/warsh_json`, while the SVGs in
+    // `assets/azrak` remain the display artwork. Their polygons must agree.
+    for (final page in [1, 2, 3, 15, 106, 604]) {
+      final fromJson = await AyahPageGeometry.load(page);
+      final svg = await rootBundle.loadString('assets/azrak/$page.svg');
+      final fromSvg = AyahPageGeometry.parse(svg);
+
+      expect(fromJson.viewBox, fromSvg.viewBox,
+          reason: 'viewBox for page $page must match the rendered SVG');
+      expect(fromJson.ayahs.length, fromSvg.ayahs.length,
+          reason: 'ayah count for page $page');
+
+      for (var i = 0; i < fromJson.ayahs.length; i++) {
+        final a = fromJson.ayahs[i];
+        final b = fromSvg.ayahs[i];
+        expect(a.surah, b.surah, reason: 'page $page ayah #$i surah');
+        expect(a.ayah, b.ayah, reason: 'page $page ayah #$i ayah');
+        expect(a.polygons, equals(b.polygons),
+            reason: 'page $page ayah #$i polygons');
+      }
+    }
+  });
+
+  test('loads surah-specific hit layers', () async {
+    final g = await AyahPageGeometry.loadKey('106-surah4');
+    expect(g.ayahs, isNotEmpty);
+    expect(g.ayahs.first.surah, 4);
+    expect(g.viewBox.height, lessThan(550));
+  });
+
+  test('parses both upstream polygon encodings', () {
+    final pairs = AyahPageGeometry.parsePolygon('1,2 3,4 5,6');
+    expect(pairs, hasLength(1));
+    expect(pairs.single, equals(const [Offset(1, 2), Offset(3, 4), Offset(5, 6)]));
+
+    final path = AyahPageGeometry.parsePolygon('M 0 0 L 1 0 L 1 1 Z');
+    expect(path, hasLength(1));
+    expect(path.single, equals(const [Offset(0, 0), Offset(1, 0), Offset(1, 1)]));
+  });
+
   test('findAt returns first ayah polygon for page 1', () async {
     final g = await AyahPageGeometry.load(1);
     final ayah = g.findAt(g.viewBox.center.dx, g.viewBox.center.dy);

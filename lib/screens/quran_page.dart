@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:dartarabic/dartarabic.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart'; // For loading the JSON file
 
@@ -442,6 +443,7 @@ class _QuranPageState extends State<QuranPage> {
       final path = 'assets/azrak/$page.svg';
       rootBundle.load(path); // warm the asset bytes
       _svgWarmPaths.add(path);
+      unawaited(_ayahGeometryFor(page)); // warm the small JSON hit layer too
     }
   }
 

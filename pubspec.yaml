@@ -94,6 +94,7 @@ flutter:
     - assets/quran.db
     - assets/chapters.json
     - assets/quran-pages-index.json
+    - assets/warsh_json/
 
   fonts:
     - family: amiri
