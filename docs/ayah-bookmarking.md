@@ -6,10 +6,11 @@ bottom sheet menu.
 
 ## Where the hit layer comes from
 
-The azrak pages in `assets/azrak/*.svg` are full vector renderings of the
-Warsh/KFQC mushaf page. Transparent `<path class="ayahPolygon" ...>` elements
-at the start of each SVG define the clickable area of every ayah; the glyphs
-are rendered on top of them.
+The raw azrak sources in `test/fixtures/azrak/*.svg` are full vector renderings
+of the Warsh/KFQC mushaf page. Transparent `<path class="ayahPolygon" ...>`
+elements at the start of each SVG define the clickable area of every ayah; the
+glyphs are rendered on top of them. The app bundles compiled
+`assets/azrak/*.svg.vec` files generated from those sources.
 
 The same polygons are also published as compact per-page JSON by
 [quran-svg-with-aya-clickable-layer](https://github.com/AhmedAbuelenin/quran-svg-with-aya-clickable-layer),
@@ -21,6 +22,20 @@ Pinned upstream commit: `0198423eb867ba26051aba6ac902cd5d10aadd1b`
 ("Fix ayah identity and complete polygon coverage in per-page data"). Earlier
 commits have `surahNumber: 0, ayahNumber: 0` in most page JSON files — do not
 downgrade below this commit.
+
+### Compiled display assets
+
+`tool/compile_azrak_svgs.dart` rebuilds `assets/azrak/*.svg.vec` from the raw
+fixtures. Keep `enableOverdrawOptimizer: false`: the optimizer crashes on these
+pages with `Infinity or NaN toInt`. Do not initialize the tessellator either —
+it produces much smaller files but renders page 300 almost blank in the
+browser. The verified non-tessellated output is 262 MB versus 329 MB of raw
+SVG, and was pixel-identical to the raw SVG for page 300.
+
+The raw SVGs live under `test/fixtures/` so they remain available for parity
+tests without being bundled into the app. `lib/screens/quran_page.dart` renders
+the compiled assets through `vector_graphics`' `AssetBytesLoader` and
+`createCompatVectorGraphic`.
 
 The polygons themselves are CC0; the KFQC page artwork is free for digital
 use. See upstream `NOTICE.md` for full terms.
@@ -49,7 +64,8 @@ The JSON polygons use the SVG's native coordinate space, so screen mapping
 still needs the page's `viewBox`. Instead of reading it from the full SVG, we
 store the exact values of the local SVGs in `assets/warsh_json/viewboxes.json`
 (`{ "001": [left, top, width, height], ... }`). This preserves the small
-per-page re-centering already applied to `assets/azrak/*.svg`.
+per-page re-centering already applied to the raw SVGs in
+`test/fixtures/azrak/` and their compiled `.svg.vec` outputs.
 
 With `BoxFit.fill` in a box of size `(w, h)` and viewBox `(vx, vy, vw, vh)`:
 
@@ -71,8 +87,10 @@ test over every subpath of every ayah on the page.
   - `AyahGeometry.contains` / `findAt` — point-in-polygon hit-testing.
   - `pathFor` / `AyahHighlightPainter` — screen-space highlight overlay.
 - `lib/screens/quran_page.dart`
-  - `_imageWidget(...)` wraps the SVG with a `GestureDetector` that fires
-    `onLongPressStart` (only for SVG / azrak pages; PNG asbahani pages skip
+  - `_vectorPicture(...)` loads compiled `.svg.vec` assets through
+    `vector_graphics`.
+  - `_imageWidget(...)` wraps the compiled page with a `GestureDetector` that
+    fires `onLongPressStart` (only for azrak pages; PNG asbahani pages skip
     the handler because they carry no matching polygons).
   - `_handleAyahLongPress(page, localPosition, size)` — maps the position and
     toggles the bookmark.
@@ -110,8 +128,9 @@ hit layer for neighbouring pages. Both caches are per-session only.
 ## Tests
 
 `test/ayah_geometry_test.dart` verifies that the vendored JSON produces the
-same ayah identities, polygons and viewBox as the real SVGs on pages
-1, 2, 3, 15, 106 and 604, in addition to the hit-test and highlight tests.
+same ayah identities, polygons and viewBox as the raw SVGs in
+`test/fixtures/azrak/` on pages 1, 2, 3, 15, 106, 300 and 604, checks that all
+604 compiled display assets exist, and covers the hit-test and highlight tests.
 
 ## Future work
 

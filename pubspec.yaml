@@ -41,7 +41,8 @@ dependencies:
   dartarabic: ^0.1.2
   flutter_launcher_icons: ^0.14.1
   wakelock_plus: ^1.2.8
-  flutter_svg: ^2.0.10+1
+  # Pinned to the version verified against the compiled azrak assets.
+  vector_graphics: 1.1.18
 
 flutter_native_splash:
   color: "#FFFFFF"
@@ -56,6 +57,9 @@ dev_dependencies:
     sdk: flutter
 
   icons_launcher: ^3.0.0
+
+  # Used by tool/compile_azrak_svgs.dart.
+  vector_graphics_compiler: 1.1.16
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:vector_graphics/vector_graphics_compat.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:dartarabic/dartarabic.dart';
@@ -435,12 +435,26 @@ class _QuranPageState extends State<QuranPage> {
     });
   }
 
+  Widget _vectorPicture(
+    String assetPath, {
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.fill,
+  }) {
+    return createCompatVectorGraphic(
+      loader: AssetBytesLoader(assetPath),
+      width: width,
+      height: height,
+      fit: fit,
+    );
+  }
+
   void _prefetchPage(int page) {
     if (page < 1 || page > totalPagesNumber) return;
     if (activeWayIndex == 1) {
       precacheImage(AssetImage('assets/quran_pages/$page.png'), context);
     } else {
-      final path = 'assets/azrak/$page.svg';
+      final path = 'assets/azrak/$page.svg.vec';
       rootBundle.load(path); // warm the asset bytes
       _svgWarmPaths.add(path);
       unawaited(_ayahGeometryFor(page)); // warm the small JSON hit layer too
@@ -449,7 +463,7 @@ class _QuranPageState extends State<QuranPage> {
 
   Widget _pageImageWidget(BuildContext context, int page) {
     var asbahaniPagePath = 'assets/quran_pages/$page.png';
-    var azrakPagePath = 'assets/azrak/$page.svg';
+    var azrakPagePath = 'assets/azrak/$page.svg.vec';
 
     var isAsbahaniWayChoosen = activeWayIndex == 1;
     bool isLandscape =
@@ -478,7 +492,7 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _imageWidget(String assetPath, BuildContext ctx, int page) {
-    final svg = assetPath.endsWith('.svg');
+    final svg = assetPath.endsWith('.svg.vec');
     Widget placeholder = const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -503,22 +517,15 @@ class _QuranPageState extends State<QuranPage> {
                   svgWidget = SizedBox(
                     width: constraints.maxWidth,
                     height: constraints.maxHeight,
-                    child: SvgPicture.asset(
-                      assetPath,
-                      fit: BoxFit.fill,
-                    ),
+                    child: _vectorPicture(assetPath),
                   );
                 } else if (constraints.hasBoundedWidth) {
-                  svgWidget = SvgPicture.asset(
+                  svgWidget = _vectorPicture(
                     assetPath,
-                    fit: BoxFit.fill,
                     width: constraints.maxWidth,
                   );
                 } else {
-                  svgWidget = SvgPicture.asset(
-                    assetPath,
-                    fit: BoxFit.fill,
-                  );
+                  svgWidget = _vectorPicture(assetPath);
                 }
                 final highlight = _highlightFor(page);
                 final gestureWidget = GestureDetector(
@@ -686,14 +693,14 @@ class _QuranPageState extends State<QuranPage> {
                   _footerRow(index),
                 ],
               ),
-              // Invisible decoy SVG loads for neighboring pages: this triggers
-              // flutter_svg's cache so the real page appears instantly.
+              // Invisible decoy loads for neighboring pages: this warms the
+              // vector_graphics cache so the real page appears instantly.
               ..._svgWarmPaths.map((path) => Positioned(
                     left: 0,
                     top: 0,
                     width: 1,
                     height: 1,
-                    child: Opacity(opacity: 0, child: SvgPicture.asset(path)),
+                    child: Opacity(opacity: 0, child: _vectorPicture(path)),
                   )),
             ],
           ),

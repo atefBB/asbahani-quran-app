@@ -1,4 +1,6 @@
-import 'package:flutter/services.dart';
+import 'dart:io';
+import 'dart:ui' show Size;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:asbahani/data/ayah_geometry.dart';
 
@@ -21,11 +23,12 @@ void main() {
   });
 
   test('JSON hit layer matches the polygons embedded in the SVGs', () async {
-    // The hit layer is now loaded from `assets/warsh_json`, while the SVGs in
-    // `assets/azrak` remain the display artwork. Their polygons must agree.
+    // The hit layer comes from `assets/warsh_json`; the raw SVGs are kept as
+    // test fixtures while the app bundles only their compiled .svg.vec files.
+    // Their polygons must still agree.
     for (final page in [1, 2, 3, 15, 106, 300, 604]) {
       final fromJson = await AyahPageGeometry.load(page);
-      final svg = await rootBundle.loadString('assets/azrak/$page.svg');
+      final svg = await File('test/fixtures/azrak/$page.svg').readAsString();
       final fromSvg = AyahPageGeometry.parse(svg);
 
       expect(fromJson.viewBox, fromSvg.viewBox,
@@ -41,6 +44,16 @@ void main() {
         expect(a.polygons, equals(b.polygons),
             reason: 'page $page ayah #$i polygons');
       }
+    }
+  });
+
+  test('all compiled azrak display assets are present', () {
+    for (var page = 1; page <= 604; page++) {
+      final asset = File('assets/azrak/$page.svg.vec');
+      expect(asset.existsSync(), isTrue,
+          reason: 'missing compiled display asset for page $page');
+      expect(asset.lengthSync(), greaterThan(0),
+          reason: 'empty compiled display asset for page $page');
     }
   });
 
