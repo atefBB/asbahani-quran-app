@@ -16,6 +16,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Ubuntu 26.04 runners default to Java 25, which Gradle 8.14 cannot parse
+      # ("Unsupported class file major version 69"). Flutter's Android toolchain
+      # uses JDK 17, so pin it explicitly before setting up Flutter.
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
