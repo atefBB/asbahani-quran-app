@@ -109,11 +109,10 @@ lib/
 
 assets/
 ├── quran_pages/          # Asbahani recitation page images (604 PNGs)
-├── azrak/                # Azrak recitation page images (604 PNGs)
+├── azrak/                # Warsh via Al-Azraq pages (604 compiled .svg.vec files)
 ├── quran.json            # Complete Quran text with metadata
 ├── chapters.json         # 114 surahs with names, verse counts, page numbers
-├── quran.db              # SQLite database (available for future use)
-├── fonts/                # Amiri & Avenir font families
+├── fonts/                # Amiri & Avenir Arabic fonts
 └── *.png                 # App logos and splash screen assets
 ```
 
@@ -129,14 +128,14 @@ assets/
 |---------|---------|
 | `al_quran` | Surah metadata lookup by page number |
 | `shared_preferences` | Local storage for bookmarks & preferences |
-| `arabic_font` | Arabic font theming integration |
+| `vector_graphics` | Renders the compiled Warsh `.svg.vec` pages |
 | `dartarabic` | Arabic text processing (diacritic removal) |
 | `wakelock_plus` | Keep screen on while reading |
 | `flutter_native_splash` | Custom branded splash screen |
 | `flutter_launcher_icons` | App icon generation |
 
 ### Assets
-- **Page Images**: 1,208 high-quality PNG images (604 per recitation style)
+- **Page Assets**: 604 PNG pages (Asbahani) and 604 compiled `.svg.vec` pages (Warsh via Al-Azraq)
 - **Quran Text**: JSON with 6,236 ayahs in Uthmani and Emlaei scripts
 - **Chapters**: Complete surah metadata in Arabic, English, and French
 

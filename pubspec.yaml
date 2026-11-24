@@ -36,7 +36,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.3.2
   flutter_native_splash: ^2.4.1
-  arabic_font: ^0.0.9
   package_rename: ^1.7.1
   dartarabic: ^0.1.2
   flutter_launcher_icons: ^0.14.1
@@ -95,7 +94,6 @@ flutter:
     - assets/logo.png
     - assets/asbahani-logo.png
     - assets/quran.json
-    - assets/quran.db
     - assets/chapters.json
     - assets/quran-pages-index.json
     - assets/warsh_json/
@@ -107,6 +105,8 @@ flutter:
         - asset: assets/fonts/Amiri/Amiri-Italic.ttf
         - asset: assets/fonts/Amiri/Amiri-BoldItalic.ttf
         - asset: assets/fonts/Amiri/Amiri-Bold.ttf
-    - family: avenir
+    # Vendored from arabic_font 0.0.9 (MIT, see LICENSE.txt) so the package's
+    # other 70 font files don't get bundled into the app.
+    - family: Avenir Arabic
       fonts:
-        - asset: assets/fonts/avenir-regular.otf
+        - asset: assets/fonts/AvenirArabic/Avenir-Arabic-Regular.ttf

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:arabic_font/arabic_font.dart';
 
 import 'quran_page.dart';
 
@@ -12,8 +11,7 @@ class QuranScreen extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'اﻷصبهاني',
       theme: ThemeData(
-        fontFamily: ArabicThemeData.font(arabicFont: ArabicFont.avenirArabic),
-        package: ArabicThemeData.package,
+        fontFamily: 'Avenir Arabic',
       ),
       home: const QuranPage(),
     );
