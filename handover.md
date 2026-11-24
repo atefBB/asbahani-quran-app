@@ -6,9 +6,9 @@ starts or finishes.
 ## Current state
 
 - Branch: `svg-pages`
-- Latest tag: `v1.9.9-beta` (`9a751e5`)
-- Latest release APK: **339.3 MB / 324 MiB**; point 2 changes are uncommitted and
-  projected at **~331.9 MB** (pending a CI tag build — no Android SDK locally).
+- Latest tag: `v1.10.0-beta` (`2c8c107`)
+- Latest release APK: **331.8 MB / 316 MiB** (`v1.10.0-beta`), down from
+  339.3 MB at `v1.9.9-beta`.
 - `flutter analyze`: clean
 - `flutter test`: 15/15 passing
 
@@ -49,12 +49,13 @@ Play can use the AAB.
   `android/app/src/main/AndroidManifest.xml` (debug/profile manifests keep it
   for the Flutter tool).
 - Updated README references to `quran.db`, `arabic_font` and the azrak asset type.
-- **Measured asset saving: 7.431 MB deflated** (339.3 MB → projected 331.9 MB).
+- **Measured asset saving: 7.431 MB deflated**; the released APK dropped
+  7,467,262 bytes (339,296,477 → 331,829,215) after Dex/manifest changes.
 - Verified: `flutter pub get`, `flutter analyze` clean, `flutter test` 15/15, and
   a clean `flutter build bundle` contains only the vendored Avenir font — no
   `quran.db`, `avenir-regular.otf` or `arabic_font` package assets.
-- Not yet built locally: this machine has no Android SDK, so the final APK size
-  must be confirmed by the tag workflow.
+- CI built and published `v1.10.0-beta` successfully; the released APK was
+  inspected and contains none of the three removed assets.
 
 ### 3. Half-precision compiled SVG pages — `[declined]`
 
@@ -100,5 +101,6 @@ current visually exact build.
 - 2026-11-24: Created this handover with the size investigation and backlog.
 - 2026-11-24: Point 2 done — removed `quran.db`, the `arabic_font` package and
   unused `avenir` font, vendored Avenir Arabic Regular, dropped release
-  `INTERNET` permission, updated README. Estimated 7.43 MB smaller APK;
-  analyze clean and 15/15 tests pass. APK build pending CI (no local SDK).
+  `INTERNET` permission, updated README. Analyze clean, 15/15 tests pass.
+  Tagged/pushed `v1.10.0-beta`; CI APK is 331.8 MB, 7.47 MB smaller than
+  `v1.9.9-beta`, and contains none of the removed assets.
