@@ -6,12 +6,11 @@ starts or finishes.
 ## Current state
 
 - Branch: `svg-pages`
-- Latest tag: `v1.10.0-beta` (`2c8c107`)
-- Latest release APK: **331.8 MB / 316 MiB** (`v1.10.0-beta`), down from
-  339.3 MB at `v1.9.9-beta`.
+- Latest tag: `v1.11.1-beta` (`98bdb53`)
+- Latest release APK: **332.3 MB / 317 MiB** (`v1.11.1-beta`), up ~0.47 MB from
+  331.8 MB at `v1.10.0-beta` after adding `share_plus` + `file_picker`.
 - `flutter analyze`: clean
 - `flutter test`: 22/22 passing
-- Uncommitted: bookmark export/import in the bookmark tab.
 
 The app bundles two complete mushaf styles: 604 Asbahani PNG pages and 604
 compiled Warsh `.svg.vec` pages. The ayah hit layer comes from vendored
@@ -110,4 +109,9 @@ current visually exact build.
   import picks a `.json` file and merges, deduplicating and keeping existing
   bookmarks. Added `share_plus` + `file_picker`, 7 transfer tests, and a
   notifier so the open bottom sheet refreshes after import. Analyze clean,
-  22/22 tests and web release build pass; Android build pending CI.
+  22/22 tests and web release build pass.
+- 2026-11-24: `v1.11.0-beta` CI build failed: `share_plus 12.0.2` ships Kotlin
+  2.2 metadata, which the project's KGP 1.9.24 could not compile. Bumped
+  `org.jetbrains.kotlin.android` to 2.2.20 in `android/settings.gradle`;
+  `v1.11.1-beta` built and published successfully (332.3 MB APK). The
+  `v1.11.0-beta` tag exists but has no release — use `v1.11.1-beta`.
