@@ -9,134 +9,8 @@ import 'package:flutter/services.dart'; // For loading the JSON file
 
 import 'package:asbahani/data/page_data.dart';
 import 'package:asbahani/data/ayah_geometry.dart';
-
-class _JuzHizbTabPage extends StatefulWidget {
-  final dynamic pageController;
-  const _JuzHizbTabPage({required this.pageController});
-
-  @override
-  State<_JuzHizbTabPage> createState() => _JuzHizbTabPageState();
-}
-
-class _JuzHizbTabPageState extends State<_JuzHizbTabPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      child: Column(
-        children: [
-          TabBar(
-            controller: _tabController,
-            labelColor: Colors.blue,
-            unselectedLabelColor: Colors.black,
-            indicatorColor: Colors.blue,
-            tabs: const [
-              Tab(icon: Icon(Icons.view_list)),
-              Tab(icon: Icon(Icons.grid_view)),
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _JuzTabContent(pageController: widget.pageController),
-                _HizbTabContent(pageController: widget.pageController),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _JuzTabContent extends StatelessWidget {
-  final dynamic pageController;
-  const _JuzTabContent({required this.pageController});
-
-  @override
-  Widget build(BuildContext context) {
-    final juzMap = <int, int>{};
-    for (int i = 0; i < quranPages.length; i++) {
-      final juz = quranPages[i].juz;
-      if (!juzMap.containsKey(juz)) {
-        juzMap[juz] = i + 1;
-      }
-    }
-
-    return ListView.builder(
-      itemCount: juzMap.length,
-      itemBuilder: (context, index) {
-        final juzNumber = index + 1;
-        final pageNumber = juzMap[juzNumber]!;
-        return ListTile(
-          leading: const Text('جزء', style: TextStyle(fontFamily: 'amiri')),
-          title: Text('$juzNumber'),
-          trailing: Text('ص $pageNumber'),
-          onTap: () {
-            Navigator.pop(context);
-            Future.delayed(const Duration(milliseconds: 300), () {
-              if (pageController.hasClients) {
-                pageController.jumpToPage(pageNumber - 1);
-              }
-            });
-          },
-        );
-      },
-    );
-  }
-}
-
-class _HizbTabContent extends StatelessWidget {
-  final dynamic pageController;
-  const _HizbTabContent({required this.pageController});
-
-  @override
-  Widget build(BuildContext context) {
-    final hizbMap = <int, int>{};
-    for (int i = 0; i < quranPages.length; i++) {
-      final hizb = quranPages[i].hizb;
-      if (!hizbMap.containsKey(hizb)) {
-        hizbMap[hizb] = i + 1;
-      }
-    }
-
-    return ListView.builder(
-      itemCount: hizbMap.length,
-      itemBuilder: (context, index) {
-        final hizbNumber = index + 1;
-        final pageNumber = hizbMap[hizbNumber]!;
-        return ListTile(
-          leading: const Text('حزب', style: TextStyle(fontFamily: 'amiri')),
-          title: Text('$hizbNumber'),
-          trailing: Text('ص $pageNumber'),
-          onTap: () {
-            Navigator.pop(context);
-            Future.delayed(const Duration(milliseconds: 300), () {
-              if (pageController.hasClients) {
-                pageController.jumpToPage(pageNumber - 1);
-              }
-            });
-          },
-        );
-      },
-    );
-  }
-}
+import 'package:asbahani/data/quran_navigation.dart';
+import 'package:asbahani/screens/quran_menu_tab.dart';
 
 class QuranPage extends StatefulWidget {
   const QuranPage({super.key});
@@ -598,7 +472,11 @@ class _QuranPageState extends State<QuranPage> {
         child:
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           GestureDetector(
-            onTap: () => _showMenu(context, initialTabIndex: 4),
+            onTap: () => _showMenu(
+              context,
+              initialTabIndex: 0,
+              initialMenuSection: QuranMenuSection.hizb,
+            ),
             child: DefaultTextStyle(
               style: const TextStyle(
                   fontSize: 12,
@@ -615,7 +493,11 @@ class _QuranPageState extends State<QuranPage> {
             onPressed: () => _toggleBookmark(pageNumber),
           ),
           GestureDetector(
-            onTap: () => _showMenu(context, initialTabIndex: 0),
+            onTap: () => _showMenu(
+              context,
+              initialTabIndex: 0,
+              initialMenuSection: QuranMenuSection.surah,
+            ),
             child: DefaultTextStyle(
               style: const TextStyle(
                   fontSize: 12,
@@ -709,8 +591,18 @@ class _QuranPageState extends State<QuranPage> {
     );
   }
 
-  void _showMenu(context, {int? initialTabIndex}) async {
+  void _showMenu(
+    context, {
+    int? initialTabIndex,
+    QuranMenuSection initialMenuSection = QuranMenuSection.all,
+  }) async {
     int tabIndex = initialTabIndex ?? await _getLastTabPanelIndex();
+    // The old juzz/hizb tab (index 4) was merged into the surah tab.
+    if (tabIndex >= 4) {
+      tabIndex = 0;
+    } else {
+      tabIndex = tabIndex.clamp(0, 3).toInt();
+    }
 
     showModalBottomSheet(
       context: context,
@@ -718,7 +610,7 @@ class _QuranPageState extends State<QuranPage> {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: DefaultTabController(
-            length: 5,
+            length: 4,
             initialIndex: tabIndex,
             child: Builder(
               builder: (context) {
@@ -740,17 +632,19 @@ class _QuranPageState extends State<QuranPage> {
                         Tab(icon: Icon(Icons.search)),
                         Tab(icon: Icon(Icons.bookmark)),
                         Tab(icon: Icon(Icons.book)),
-                        Tab(icon: Icon(Icons.view_list)),
                       ],
                     ),
                     Expanded(
                       child: TabBarView(
                         children: [
-                          _chapterTab(context),
+                          QuranMenuTab(
+                            pageController: _pageController,
+                            chapters: chapters,
+                            initialSection: initialMenuSection,
+                          ),
                           _searchTab(context),
                           _bookmarksTab(context),
                           _waysTab(context),
-                          _juzHizbTab(context),
                         ],
                       ),
                     ),
@@ -775,27 +669,6 @@ class _QuranPageState extends State<QuranPage> {
               },
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _chapterTab(context) {
-    return ListView.builder(
-      itemCount: chapters.length,
-      itemBuilder: (BuildContext context, int index) {
-        var chapterPageNumber = chapters[index]["page"];
-        var chapterName = DartArabic.stripTashkeel(chapters[index]["name_ar"]);
-
-        return ListTile(
-          title: Text(chapterName),
-          subtitle: Text('صفحة  $chapterPageNumber'),
-          onTap: () {
-            Navigator.pop(context);
-            if (_pageController.hasClients) {
-              _pageController.jumpToPage(chapterPageNumber - 1);
-            }
-          },
         );
       },
     );
@@ -991,10 +864,6 @@ class _QuranPageState extends State<QuranPage> {
         );
       },
     );
-  }
-
-  Widget _juzHizbTab(BuildContext context) {
-    return _JuzHizbTabPage(pageController: _pageController);
   }
 
   void _showQuickGoToPageDialog(BuildContext context) {
