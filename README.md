@@ -131,6 +131,8 @@ assets/
 | `vector_graphics` | Renders the compiled Warsh `.svg.vec` pages |
 | `dartarabic` | Arabic text processing (diacritic removal) |
 | `wakelock_plus` | Keep screen on while reading |
+| `share_plus` | Share exported bookmark files |
+| `file_picker` | Choose a bookmark file to import |
 | `flutter_native_splash` | Custom branded splash screen |
 | `flutter_launcher_icons` | App icon generation |
 
@@ -174,6 +176,10 @@ assets/
 ### Bookmarks
 - Tap the **bookmark icon** in the page header to save/remove the current page
 - Bookmarked pages show a filled bookmark icon
+- Long-press a verse to save/remove it; saved verses appear in the bookmark tab
+- Open the bookmark tab to **تصدير** (export) both page and verse bookmarks as a
+  single shareable `.json` file, or **استيراد** (import) one back. Importing
+  merges with your current bookmarks and skips duplicates.
 
 ## ⚙️ Configuration
 

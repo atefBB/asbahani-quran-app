@@ -6,7 +6,10 @@ import 'package:dartarabic/dartarabic.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart'; // For loading the JSON file
+import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
 
+import 'package:asbahani/data/bookmark_transfer.dart';
 import 'package:asbahani/data/page_data.dart';
 import 'package:asbahani/data/ayah_geometry.dart';
 import 'package:asbahani/data/quran_navigation.dart';
@@ -36,6 +39,9 @@ class _QuranPageState extends State<QuranPage> {
   List searchResults = [];
   List<int> bookmarks = [];
   List<String> ayahBookmarks = [];
+  // The bottom sheet has its own element tree, so parent setState alone does
+  // not rebuild the open bookmarks tab after an import.
+  final ValueNotifier<int> _bookmarksVersion = ValueNotifier<int>(0);
   final Map<int, AyahPageGeometry> _ayahGeometryCache = {};
   final List<String> _svgWarmPaths = [];
   int? _highlightAyahPage;
@@ -50,6 +56,7 @@ class _QuranPageState extends State<QuranPage> {
   @override
   void dispose() {
     searchController.dispose();
+    _bookmarksVersion.dispose();
     super.dispose();
   }
 
@@ -133,6 +140,88 @@ class _QuranPageState extends State<QuranPage> {
     await prefs.setStringList('ayahBookmarks', ayahBookmarks);
   }
 
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, textAlign: TextAlign.center),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  /// Exports page and ayah bookmarks together as one JSON file. XFile.fromData
+  /// keeps this working on web and desktop too, without a temp directory.
+  Future<void> _exportBookmarks() async {
+    try {
+      final json = BookmarkTransfer.encode(BookmarkData(
+        pages: bookmarks,
+        ayahs: ayahBookmarks,
+      ));
+      final stamp =
+          DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+      final file = XFile.fromData(
+        utf8.encode(json),
+        name: 'asbahani-bookmarks-$stamp.json',
+        mimeType: 'application/json',
+      );
+      final result = await Share.shareXFiles(
+        [file],
+        subject: 'محفوظات الأصبهاني',
+      );
+      if (result.status == ShareResultStatus.success) {
+        _showMessage('تم تصدير المحفوظات');
+      }
+    } catch (_) {
+      _showMessage('تعذّر تصدير المحفوظات');
+    }
+  }
+
+  /// Picks a JSON file and merges its bookmarks into the current ones.
+  Future<void> _importBookmarks() async {
+    try {
+      final picked = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        withData: true,
+      );
+      if (picked == null) return; // user cancelled
+      final bytes = picked.files.single.bytes;
+      if (bytes == null) {
+        _showMessage('تعذّر قراءة الملف');
+        return;
+      }
+
+      final parsed = BookmarkTransfer.decode(utf8.decode(bytes));
+      final merged = BookmarkTransfer.merge(
+        BookmarkData(pages: bookmarks, ayahs: ayahBookmarks),
+        parsed.bookmarks,
+      );
+      if (merged.isEmpty) {
+        _showMessage('المحفوظات في الملف موجودة بالفعل');
+        return;
+      }
+
+      setState(() {
+        bookmarks = merged.bookmarks.pages;
+        ayahBookmarks = merged.bookmarks.ayahs;
+      });
+      _bookmarksVersion.value++;
+      await Future.wait([_saveBookmarks(), _saveAyahBookmarks()]);
+
+      final skipped = parsed.skipped > 0
+          ? ' (تم تجاهل ${parsed.skipped} إدخال غير صالح)'
+          : '';
+      _showMessage(
+          'تم استيراد ${merged.addedPages} صفحة و ${merged.addedAyahs} آية$skipped');
+    } on FormatException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('تعذّر استيراد المحفوظات');
+    }
+  }
+
   bool _toggleAyahBookmark(int surah, int ayah) {
     final key = '$surah:$ayah';
     final added = !ayahBookmarks.contains(key);
@@ -144,17 +233,12 @@ class _QuranPageState extends State<QuranPage> {
       }
       _saveAyahBookmarks();
     });
+    _bookmarksVersion.value++;
     final surahName = _chapterName(surah);
     final message = added
         ? 'تم حفظ الآية $ayah من $surahName'
         : 'تم إزالة الآية من المحفوظات';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, textAlign: TextAlign.center),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    _showMessage(message);
     return added;
   }
 
@@ -258,6 +342,7 @@ class _QuranPageState extends State<QuranPage> {
       }
       _saveBookmarks();
     });
+    _bookmarksVersion.value++;
   }
 
   String _getHizbText(int page) {
@@ -719,6 +804,13 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Widget _bookmarksTab(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: _bookmarksVersion,
+      builder: (context, _, __) => _buildBookmarksTabContent(context),
+    );
+  }
+
+  Widget _buildBookmarksTabContent(BuildContext context) {
     final sortedBookmarks = List<int>.from(bookmarks)..sort();
     final sortedAyahBookmarks = List<String>.from(ayahBookmarks)..sort((a, b) {
         final aParts = a.split(':').map(int.parse).toList();
@@ -728,46 +820,70 @@ class _QuranPageState extends State<QuranPage> {
             : aParts[1] - bParts[1];
       });
 
-    if (sortedBookmarks.isEmpty && sortedAyahBookmarks.isEmpty) {
-      return const Center(child: Text('لا توجد محفوظات بعد'));
-    }
-
-    return ListView(
+    return Column(
       children: [
-        if (sortedBookmarks.isNotEmpty) ...[
-          _bookmarkSectionHeader('الصفحات المحفوظة'),
-          ...sortedBookmarks.map((page) {
-            return ListTile(
-              title: Text('الصفحة $page'),
-              onTap: () {
-                Navigator.pop(context);
-                _pageController.jumpToPage(page - 1);
-              },
-            );
-          }),
-        ],
-        if (sortedAyahBookmarks.isNotEmpty) ...[
-          _bookmarkSectionHeader('الآيات المحفوظة'),
-          ...sortedAyahBookmarks.map((key) {
-            final parts = key.split(':');
-            final surah = int.parse(parts[0]);
-            final ayah = int.parse(parts[1]);
-            final page = _pageOfAyah(surah, ayah);
-            return ListTile(
-              leading: const Icon(Icons.bookmark, size: 20),
-              title: Text('الآية $ayah - ${_chapterName(surah)}'),
-              subtitle: page != null
-                  ? Text('صفحة $page')
-                  : null,
-              onTap: () {
-                Navigator.pop(context);
-                if (page != null) {
-                  _jumpToAyah(page, surah, ayah);
-                }
-              },
-            );
-          }),
-        ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _exportBookmarks,
+                  icon: const Icon(Icons.ios_share, size: 18),
+                  label: const Text('تصدير'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _importBookmarks,
+                  icon: const Icon(Icons.file_upload, size: 18),
+                  label: const Text('استيراد'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: sortedBookmarks.isEmpty && sortedAyahBookmarks.isEmpty
+              ? const Center(child: Text('لا توجد محفوظات بعد'))
+              : ListView(
+                  children: [
+                    if (sortedBookmarks.isNotEmpty) ...[
+                      _bookmarkSectionHeader('الصفحات المحفوظة'),
+                      ...sortedBookmarks.map((page) {
+                        return ListTile(
+                          title: Text('الصفحة $page'),
+                          onTap: () {
+                            Navigator.pop(context);
+                            _pageController.jumpToPage(page - 1);
+                          },
+                        );
+                      }),
+                    ],
+                    if (sortedAyahBookmarks.isNotEmpty) ...[
+                      _bookmarkSectionHeader('الآيات المحفوظة'),
+                      ...sortedAyahBookmarks.map((key) {
+                        final parts = key.split(':');
+                        final surah = int.parse(parts[0]);
+                        final ayah = int.parse(parts[1]);
+                        final page = _pageOfAyah(surah, ayah);
+                        return ListTile(
+                          leading: const Icon(Icons.bookmark, size: 20),
+                          title: Text('الآية $ayah - ${_chapterName(surah)}'),
+                          subtitle: page != null ? Text('صفحة $page') : null,
+                          onTap: () {
+                            Navigator.pop(context);
+                            if (page != null) {
+                              _jumpToAyah(page, surah, ayah);
+                            }
+                          },
+                        );
+                      }),
+                    ],
+                  ],
+                ),
+        ),
       ],
     );
   }

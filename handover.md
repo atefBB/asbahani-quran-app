@@ -10,7 +10,8 @@ starts or finishes.
 - Latest release APK: **331.8 MB / 316 MiB** (`v1.10.0-beta`), down from
   339.3 MB at `v1.9.9-beta`.
 - `flutter analyze`: clean
-- `flutter test`: 15/15 passing
+- `flutter test`: 22/22 passing
+- Uncommitted: bookmark export/import in the bookmark tab.
 
 The app bundles two complete mushaf styles: 604 Asbahani PNG pages and 604
 compiled Warsh `.svg.vec` pages. The ayah hit layer comes from vendored
@@ -104,3 +105,9 @@ current visually exact build.
   `INTERNET` permission, updated README. Analyze clean, 15/15 tests pass.
   Tagged/pushed `v1.10.0-beta`; CI APK is 331.8 MB, 7.47 MB smaller than
   `v1.9.9-beta`, and contains none of the removed assets.
+- 2026-11-24: Added bookmark export/import in the bookmark tab. Export shares a
+  JSON file with both page and ayah bookmarks (`lib/data/bookmark_transfer.dart`);
+  import picks a `.json` file and merges, deduplicating and keeping existing
+  bookmarks. Added `share_plus` + `file_picker`, 7 transfer tests, and a
+  notifier so the open bottom sheet refreshes after import. Analyze clean,
+  22/22 tests and web release build pass; Android build pending CI.

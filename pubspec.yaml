@@ -42,6 +42,8 @@ dependencies:
   wakelock_plus: ^1.2.8
   # Pinned to the version verified against the compiled azrak assets.
   vector_graphics: 1.1.18
+  share_plus: ^12.0.2
+  file_picker: ^11.0.3
 
 flutter_native_splash:
   color: "#FFFFFF"
