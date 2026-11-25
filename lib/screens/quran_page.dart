@@ -53,8 +53,20 @@ class _QuranPageState extends State<QuranPage> {
   ];
   int activeWayIndex = 1; // asbahani
 
+  // Focus mode hides the page chrome without leaving this PageView. Enter by
+  // swiping up from the bottom edge; exit by swiping down from the top edge.
+  bool _focusMode = false;
+  bool _focusHintSeen = false;
+  bool _showFocusHint = false;
+  bool _focusControlsVisible = false;
+  double _focusDragDistance = 0;
+  Timer? _focusPillTimer;
+  Timer? _focusHintTimer;
+
   @override
   void dispose() {
+    _focusPillTimer?.cancel();
+    _focusHintTimer?.cancel();
     searchController.dispose();
     _bookmarksVersion.dispose();
     super.dispose();
@@ -127,6 +139,16 @@ class _QuranPageState extends State<QuranPage> {
   Future<int> _getActiveWayIndex() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getInt('activeWayIndex') ?? 1; // Default to asbahani
+  }
+
+  Future<bool> _getFocusHintSeen() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('focusHintSeen') ?? false;
+  }
+
+  Future<void> _saveFocusHintSeen() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('focusHintSeen', true);
   }
 
   Future<void> _saveBookmarks() async {
@@ -363,6 +385,7 @@ class _QuranPageState extends State<QuranPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       int lastOpenedPage = await _getLastOpenedPage();
       activeWayIndex = await _getActiveWayIndex();
+      _focusHintSeen = await _getFocusHintSeen();
 
       _pageController
           .jumpToPage(lastOpenedPage - 1); // Page starts from 0, so subtract 1
@@ -485,23 +508,21 @@ class _QuranPageState extends State<QuranPage> {
                   },
                   child: svgWidget,
                 );
-                if (highlight == null) {
-                  return gestureWidget;
-                }
                 return Stack(
                   children: [
                     gestureWidget,
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: CustomPaint(
-                          painter: AyahHighlightPainter(
-                            geometry: _highlightGeometry!,
-                            surah: highlight.$1,
-                            ayah: highlight.$2,
+                    if (highlight != null)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: AyahHighlightPainter(
+                              geometry: _highlightGeometry!,
+                              surah: highlight.$1,
+                              ayah: highlight.$2,
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 );
               },
@@ -534,11 +555,6 @@ class _QuranPageState extends State<QuranPage> {
   Widget _headerRow(index) {
     var surahName = _quranHeaderSurahName(index + 1);
     var hizb = _getHizbText(index + 1);
-    final pageNumber = index + 1;
-    // In a right-to-left mushaf spread, odd pages sit on the right and even
-    // pages on the left. Put the marker on the side this page belongs to.
-    final isRightPage = pageNumber.isOdd;
-
     return Padding(
         padding: const EdgeInsets.all(1.0),
         child:
@@ -559,45 +575,6 @@ class _QuranPageState extends State<QuranPage> {
             ),
           ),
           GestureDetector(
-            onTap: () => _showQuickGoToPageDialog(context),
-            child: Tooltip(
-              message: isRightPage ? 'الصفحة على اليمين' : 'الصفحة على اليسار',
-              // The header's cross axis is unbounded, so IntrinsicHeight gives
-              // the bar the text's height before it stretches.
-              child: IntrinsicHeight(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  textDirection: TextDirection.ltr,
-                  children: [
-                    if (!isRightPage) ...[
-                      const SizedBox(
-                        width: 1.5,
-                        child: ColoredBox(color: Colors.black),
-                      ),
-                      const SizedBox(width: 2),
-                    ],
-                    Text(
-                      '$pageNumber',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (isRightPage) ...[
-                      const SizedBox(width: 2),
-                      const SizedBox(
-                        width: 1.5,
-                        child: ColoredBox(color: Colors.black),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-          GestureDetector(
             onTap: () => _showMenu(
               context,
               initialTabIndex: 0,
@@ -613,6 +590,124 @@ class _QuranPageState extends State<QuranPage> {
             ),
           )
         ]));
+  }
+
+  Widget _footerRow(index) {
+    return GestureDetector(
+      onTap: () => _showQuickGoToPageDialog(context),
+      child: Padding(
+        padding: const EdgeInsets.all(1.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            DefaultTextStyle(
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+              child: Text('${index + 1}'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _setFocusMode(bool enabled) {
+    if (_focusMode == enabled) return;
+    _focusPillTimer?.cancel();
+    _focusHintTimer?.cancel();
+
+    setState(() {
+      _focusMode = enabled;
+      _focusControlsVisible = enabled;
+      _showFocusHint = enabled && !_focusHintSeen;
+    });
+
+    if (!enabled) return;
+
+    if (_showFocusHint) {
+      _focusHintSeen = true;
+      _saveFocusHintSeen();
+      _focusHintTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _showFocusHint = false);
+      });
+    }
+    _focusPillTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _focusControlsVisible = false);
+    });
+  }
+
+  /// Fades the chrome and animates its height to zero; the focus gesture strips
+  /// live outside this so they still work while the chrome is gone.
+  Widget _animatedChrome({required Widget child}) {
+    return AnimatedOpacity(
+      opacity: _focusMode ? 0 : 1,
+      duration: const Duration(milliseconds: 180),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        child: _focusMode ? const SizedBox.shrink() : child,
+      ),
+    );
+  }
+
+  /// [exits] is true for the top strip (swipe down to leave focus) and false
+  /// for the bottom strip (swipe up to enter it).
+  Widget _focusEdgeStrip({required bool exits}) {
+    return Positioned(
+      top: exits ? 0 : null,
+      bottom: exits ? null : 0,
+      left: 0,
+      right: 0,
+      height: 48,
+      child: Semantics(
+        label: exits
+            ? 'اسحب للأسفل للخروج من وضع التركيز'
+            : 'اسحب للأعلى لوضع التركيز',
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onVerticalDragStart: (_) => _focusDragDistance = 0,
+          onVerticalDragUpdate: (details) {
+            _focusDragDistance += details.delta.dy;
+          },
+          onVerticalDragEnd: (_) {
+            if (exits && _focusDragDistance > 40) {
+              _setFocusMode(false);
+            } else if (!exits && _focusDragDistance < -40) {
+              _setFocusMode(true);
+            }
+            _focusDragDistance = 0;
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _focusExitPill() {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 12,
+      right: 12,
+      child: GestureDetector(
+        onTap: () => _setFocusMode(false),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0x99000000),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Text(
+            _showFocusHint ? 'اسحب من الأعلى للخروج' : 'خروج من التركيز',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontFamily: 'amiri',
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -642,24 +737,36 @@ class _QuranPageState extends State<QuranPage> {
           ),
           child: Stack(
             children: [
-              Column(
-                children: [
-                  SafeArea(
-                    bottom: false,
-                    child: _headerRow(index),
-                  ),
-                  // Keeps the page artwork's top decoration away from the
-                  // header page number now that the footer was removed.
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => _showMenu(context),
-                      behavior: HitTestBehavior.opaque,
-                      child: _pageImageWidget(context, index + 1),
+              SafeArea(
+                bottom: false,
+                child: Column(
+                  children: [
+                    _animatedChrome(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _headerRow(index),
+                          // Keeps the page artwork's top decoration clear of the header.
+                          const SizedBox(height: 10),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _showMenu(context),
+                        behavior: HitTestBehavior.opaque,
+                        child: _pageImageWidget(context, index + 1),
+                      ),
+                    ),
+                    _animatedChrome(child: _footerRow(index)),
+                  ],
+                ),
               ),
+              if (!_focusMode) _focusEdgeStrip(exits: false),
+              if (_focusMode) ...[
+                _focusEdgeStrip(exits: true),
+                if (_focusControlsVisible) _focusExitPill(),
+              ],
               // Invisible decoy loads for neighboring pages: this warms the
               // vector_graphics cache so the real page appears instantly.
               ..._svgWarmPaths.map((path) => Positioned(
