@@ -333,18 +333,6 @@ class _QuranPageState extends State<QuranPage> {
     }
   }
 
-  void _toggleBookmark(int page) {
-    setState(() {
-      if (bookmarks.contains(page)) {
-        bookmarks.remove(page);
-      } else {
-        bookmarks.add(page);
-      }
-      _saveBookmarks();
-    });
-    _bookmarksVersion.value++;
-  }
-
   String _getHizbText(int page) {
     final currentPage = quranPages[page - 1];
     final hizb = currentPage.hizb;
@@ -527,10 +515,6 @@ class _QuranPageState extends State<QuranPage> {
     );
   }
 
-  bool isBookmarked(int page) {
-    return bookmarks.contains(page);
-  }
-
   String _quranHeaderSurahName(int page) {
     if (quranPagesIndex.length < page || chapters.isEmpty) {
       return '';
@@ -551,6 +535,9 @@ class _QuranPageState extends State<QuranPage> {
     var surahName = _quranHeaderSurahName(index + 1);
     var hizb = _getHizbText(index + 1);
     final pageNumber = index + 1;
+    // In a right-to-left mushaf spread, odd pages sit on the right and even
+    // pages on the left. Put the marker on the side this page belongs to.
+    final isRightPage = pageNumber.isOdd;
 
     return Padding(
         padding: const EdgeInsets.all(1.0),
@@ -571,11 +558,44 @@ class _QuranPageState extends State<QuranPage> {
               child: Text(hizb),
             ),
           ),
-          IconButton(
-            icon: Icon(isBookmarked(pageNumber)
-                ? Icons.bookmark
-                : Icons.bookmark_outline),
-            onPressed: () => _toggleBookmark(pageNumber),
+          GestureDetector(
+            onTap: () => _showQuickGoToPageDialog(context),
+            child: Tooltip(
+              message: isRightPage ? 'الصفحة على اليمين' : 'الصفحة على اليسار',
+              // The header's cross axis is unbounded, so IntrinsicHeight gives
+              // the bar the text's height before it stretches.
+              child: IntrinsicHeight(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  textDirection: TextDirection.ltr,
+                  children: [
+                    if (!isRightPage) ...[
+                      const SizedBox(
+                        width: 1.5,
+                        child: ColoredBox(color: Colors.black),
+                      ),
+                      const SizedBox(width: 2),
+                    ],
+                    Text(
+                      '$pageNumber',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (isRightPage) ...[
+                      const SizedBox(width: 2),
+                      const SizedBox(
+                        width: 1.5,
+                        child: ColoredBox(color: Colors.black),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
           GestureDetector(
             onTap: () => _showMenu(
@@ -593,28 +613,6 @@ class _QuranPageState extends State<QuranPage> {
             ),
           )
         ]));
-  }
-
-  Widget _footerRow(index) {
-    return GestureDetector(
-      onTap: () => _showQuickGoToPageDialog(context),
-      child: Padding(
-        padding: const EdgeInsets.all(1.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            DefaultTextStyle(
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-              ),
-              child: Text('${index + 1}'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -650,6 +648,9 @@ class _QuranPageState extends State<QuranPage> {
                     bottom: false,
                     child: _headerRow(index),
                   ),
+                  // Keeps the page artwork's top decoration away from the
+                  // header page number now that the footer was removed.
+                  const SizedBox(height: 10),
                   Expanded(
                     child: GestureDetector(
                       onTap: () => _showMenu(context),
@@ -657,7 +658,6 @@ class _QuranPageState extends State<QuranPage> {
                       child: _pageImageWidget(context, index + 1),
                     ),
                   ),
-                  _footerRow(index),
                 ],
               ),
               // Invisible decoy loads for neighboring pages: this warms the
