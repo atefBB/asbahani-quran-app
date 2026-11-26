@@ -34,6 +34,32 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # The release APK must be signed with the upload key, not the debug key.
+      # Store the base64-encoded .jks and its three passwords as repository
+      # secrets; the workflow fails loudly rather than shipping a debug-signed
+      # APK if any of them is missing.
+      - name: Set up release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          missing=()
+          [ -n "$KEYSTORE_BASE64" ] || missing+=(KEYSTORE_BASE64)
+          [ -n "$KEYSTORE_PASSWORD" ] || missing+=(KEYSTORE_PASSWORD)
+          [ -n "$KEY_ALIAS" ] || missing+=(KEY_ALIAS)
+          [ -n "$KEY_PASSWORD" ] || missing+=(KEY_PASSWORD)
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing release signing secrets: ${missing[*]}"
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          keytool -list -keystore android/app/upload-keystore.jks \
+            -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null
+          printf 'storeFile=upload-keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/key.properties
+
       - name: Build APK
         run: flutter build apk --release
 

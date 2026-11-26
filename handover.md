@@ -6,12 +6,13 @@ starts or finishes.
 ## Current state
 
 - Branch: `svg-pages`
-- Latest tag: `v1.13.0-beta` (this commit)
+- Latest tag: `v1.13.0-beta` (`c37504e`); the next tag is held until the four CI
+  signing secrets are configured.
 - Latest release APK: CI builds each pushed tag; the last size recorded here is
   **332.3 MB / 317 MiB** (`v1.11.1-beta`), up ~0.47 MB from 331.8 MB at
   `v1.10.0-beta` after adding `share_plus` + `file_picker`.
 - `flutter analyze`: clean
-- `flutter test`: 29/29 passing
+- `flutter test`: 30/30 passing
 
 The app bundles two complete mushaf styles: 604 Asbahani PNG pages and 604
 compiled Warsh `.svg.vec` pages. The ayah hit layer comes from vendored
@@ -65,14 +66,24 @@ deflated, projecting a ~212 MB APK. Page 300 stays intact but differs from raw
 SVG in 13.3% of pixels (mean channel delta 1.5/255). User chose to keep the
 current visually exact build.
 
-### 4. Build/release reliability — `[open]`
+### 4. Build/release reliability — `[done]`
 
-- Release builds still use `signingConfigs.debug`; add a real upload keystore
-  via CI secrets.
-- Add a PR workflow running `flutter analyze` and `flutter test`; today CI only
-  builds tags.
-- Add a test that decodes all 604 `.svg.vec` assets with the vector graphics
-  codec, not just checks that files exist.
+- `[done]` Release builds now use a real upload keystore instead of
+  `signingConfigs.debug`. The tag workflow decodes `KEYSTORE_BASE64` into
+  `android/app/upload-keystore.jks` and writes `android/key.properties` from
+  `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`; the workflow stops with
+  a named list if any secret is missing, and Gradle then signs with that key.
+  Local builds without `key.properties` still use the debug key so
+  `flutter run --release` works.
+  **Action needed: add those four secrets in GitHub repo settings before the
+  next tag build.**
+- `[done]` `.github/workflows/flutter-check.yml` runs `flutter analyze` and
+  `flutter test` on every pull request (and on demand), with the same Flutter
+  version as the release workflow.
+- `[done]` `test/vector_assets_test.dart` decodes all 604 compiled pages with
+  `VectorGraphicsCodec`, asserting a complete decode, a non-zero viewBox, paths
+  and draw commands. `vector_graphics_codec` is pinned as a dev dependency to
+  match the transitive version used by `vector_graphics`.
 
 ### 5. Runtime/UX — `[in progress]`
 
@@ -138,3 +149,9 @@ current visually exact build.
   `mounted` guards to the async loaders and refreshed the deprecated
   `Share.shareXFiles` call. `flutter analyze` clean, 29/29 tests pass.
   Tagged/pushed `v1.13.0-beta`.
+- 2026-11-26: Build/release reliability: added a PR workflow for `flutter
+  analyze` + `flutter test`, a `VectorGraphicsCodec` test that decodes all 604
+  compiled pages, and real upload-key signing in CI through four repository
+  secrets (debug key retained for local builds). `flutter analyze` clean,
+  30/30 tests pass. No tag cut yet: the release workflow would fail until the
+  four secrets are set.

@@ -61,6 +61,9 @@ dev_dependencies:
 
   # Used by tool/compile_azrak_svgs.dart.
   vector_graphics_compiler: 1.1.16
+  # Pinned to the transitive version used by vector_graphics 1.1.18 so tests
+  # can decode every compiled page through the codec directly.
+  vector_graphics_codec: 1.1.13
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
