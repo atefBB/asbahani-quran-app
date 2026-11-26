@@ -6,8 +6,8 @@ starts or finishes.
 ## Current state
 
 - Branch: `svg-pages`
-- Latest tag: `v1.13.0-beta` (`c37504e`); the next tag is held until the four CI
-  signing secrets are configured.
+- Latest tag: `v1.13.1-beta` (this commit) — the first release built with the
+  CI upload keystore.
 - Latest release APK: CI builds each pushed tag; the last size recorded here is
   **332.3 MB / 317 MiB** (`v1.11.1-beta`), up ~0.47 MB from 331.8 MB at
   `v1.10.0-beta` after adding `share_plus` + `file_picker`.
@@ -153,5 +153,5 @@ current visually exact build.
   analyze` + `flutter test`, a `VectorGraphicsCodec` test that decodes all 604
   compiled pages, and real upload-key signing in CI through four repository
   secrets (debug key retained for local builds). `flutter analyze` clean,
-  30/30 tests pass. No tag cut yet: the release workflow would fail until the
-  four secrets are set.
+  30/30 tests pass. Tagged/pushed `v1.13.1-beta` after the four CI signing
+  secrets were configured.

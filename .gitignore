@@ -44,5 +44,7 @@ app.*.map.json
 
 # FVM Version Cache
 .fvm/
+# Local secrets for CI release signing (never commit).
+.env
 # Trail local cache
 graft/
