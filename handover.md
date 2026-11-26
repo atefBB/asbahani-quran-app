@@ -6,11 +6,12 @@ starts or finishes.
 ## Current state
 
 - Branch: `svg-pages`
-- Latest tag: `v1.11.1-beta` (`98bdb53`)
-- Latest release APK: **332.3 MB / 317 MiB** (`v1.11.1-beta`), up ~0.47 MB from
-  331.8 MB at `v1.10.0-beta` after adding `share_plus` + `file_picker`.
+- Latest tag: `v1.13.0-beta` (this commit)
+- Latest release APK: CI builds each pushed tag; the last size recorded here is
+  **332.3 MB / 317 MiB** (`v1.11.1-beta`), up ~0.47 MB from 331.8 MB at
+  `v1.10.0-beta` after adding `share_plus` + `file_picker`.
 - `flutter analyze`: clean
-- `flutter test`: 22/22 passing
+- `flutter test`: 29/29 passing
 
 The app bundles two complete mushaf styles: 604 Asbahani PNG pages and 604
 compiled Warsh `.svg.vec` pages. The ayah hit layer comes from vendored
@@ -73,23 +74,34 @@ current visually exact build.
 - Add a test that decodes all 604 `.svg.vec` assets with the vector graphics
   codec, not just checks that files exist.
 
-### 5. Runtime/UX — `[open]`
+### 5. Runtime/UX — `[in progress]`
 
-- Prefetch does both `rootBundle.load()` and invisible decoy widgets, plus
-  `setState` on every page change. Consolidate into one caching path.
-- Text search lowercases the whole Quran on every keystroke; precompute a
-  normalized search index.
-- Compiled vector pages have no error UI; add one like the PNG `errorBuilder`.
-- Make wakelock optional instead of always on.
-- Use the vendored surah-specific hit layers and `markers.json` for better
-  highlighting on shared pages.
+- `[done]` Prefetch now has one path per page type: `PagePrefetchController`
+  uses Flutter's image cache for PNG pages and an invisible `VectorGraphic`
+  decoy (outside the `PageView`) for compiled pages. Page changes notify only
+  `PagePrefetchOverlay`, not `QuranPage`; the redundant `rootBundle.load()`
+  and per-page `setState` are gone.
+- `[done]` `AyahSearchIndex` normalizes ayah text once at load time instead of
+  on every keystroke, and matches diacritics/alef variants like the menu.
+- `[done]` Compiled vector pages now use the same 'فشل تحميل الصفحة' error
+  placeholder as PNG pages.
+- `[done]` Wakelock defaults on but can be turned off from the settings row in
+  the last menu tab (`AppPreferences.keepAwake`); startup and the toggle share
+  the same preference and ignore unsupported platforms.
+- `[open]` Use the vendored surah-specific hit layers and `markers.json` for
+  better highlighting on shared pages. The `NNN-surahX.json` polygons use
+  different viewBoxes (surah-only layouts), not crops of the bundled full
+  pages, so wiring them into the current highlight overlay would misalign;
+  needs a product decision on whether to render surah-specific page variants.
 
 ### 6. Maintainability — `[open]`
 
-- `lib/screens/quran_page.dart` is ~923 lines; split data loading, preferences,
+- `lib/screens/quran_page.dart` is ~1190 lines; split data loading, preferences,
   navigation and gestures into separate files.
 - Derive 604 from `quranPages` or a manifest instead of hardcoding.
-- Add `mounted` guards and error states to async loaders.
+- `[partly done]` Add `mounted` guards and error states to async loaders: guards
+  added to the data loaders, startup callback and way switch; error states still
+  open.
 - README is partly stale: the `quran.db`, `arabic_font` and azrak PNG references
   were fixed in point 2, but it still describes five menu tabs and audio
   playback that no longer exists.
@@ -115,3 +127,14 @@ current visually exact build.
   `org.jetbrains.kotlin.android` to 2.2.20 in `android/settings.gradle`;
   `v1.11.1-beta` built and published successfully (332.3 MB APK). The
   `v1.11.0-beta` tag exists but has no release — use `v1.11.1-beta`.
+- 2026-11-25: `v1.11.2-beta` moved the page number and RTL side marker into the
+  header; `v1.12.0-beta` restored the tappable page number to the footer and
+  added edge-swipe focus mode. This handover lagged behind those tags until the
+  2026-11-26 pass.
+- 2026-11-26: Runtime/UX pass on `svg-pages`: unified page prefetch behind
+  `PagePrefetchController`/`PagePrefetchOverlay`, added a precomputed
+  `AyahSearchIndex`, added a vector-page error placeholder, and made the
+  wakelock a reader setting (on by default) in the last menu tab. Added
+  `mounted` guards to the async loaders and refreshed the deprecated
+  `Share.shareXFiles` call. `flutter analyze` clean, 29/29 tests pass.
+  Tagged/pushed `v1.13.0-beta`.

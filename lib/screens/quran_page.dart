@@ -8,10 +8,14 @@ import 'dart:convert';
 import 'package:flutter/services.dart'; // For loading the JSON file
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
+import 'package:asbahani/data/app_preferences.dart';
+import 'package:asbahani/data/ayah_search.dart';
 import 'package:asbahani/data/bookmark_transfer.dart';
 import 'package:asbahani/data/page_data.dart';
 import 'package:asbahani/data/ayah_geometry.dart';
+import 'package:asbahani/data/page_prefetch.dart';
 import 'package:asbahani/data/quran_navigation.dart';
 import 'package:asbahani/screens/quran_menu_tab.dart';
 
@@ -43,7 +47,9 @@ class _QuranPageState extends State<QuranPage> {
   // not rebuild the open bookmarks tab after an import.
   final ValueNotifier<int> _bookmarksVersion = ValueNotifier<int>(0);
   final Map<int, AyahPageGeometry> _ayahGeometryCache = {};
-  final List<String> _svgWarmPaths = [];
+  final PagePrefetchController _pagePrefetch = PagePrefetchController();
+  AyahSearchIndex? _ayahSearchIndex;
+  bool _keepAwake = true;
   int? _highlightAyahPage;
   String? _highlightAyahKey;
   AyahPageGeometry? _highlightGeometry;
@@ -69,6 +75,7 @@ class _QuranPageState extends State<QuranPage> {
     _focusHintTimer?.cancel();
     searchController.dispose();
     _bookmarksVersion.dispose();
+    _pagePrefetch.dispose();
     super.dispose();
   }
 
@@ -76,14 +83,17 @@ class _QuranPageState extends State<QuranPage> {
   Future<void> _loadQuranData() async {
     final String response = await rootBundle.loadString('assets/quran.json');
     final List<dynamic> data = await jsonDecode(response);
+    if (!mounted) return;
     setState(() {
       quran = data;
+      _ayahSearchIndex = AyahSearchIndex(data);
     });
   }
 
   Future<void> _loadQuranChapters() async {
     final String response = await rootBundle.loadString('assets/chapters.json');
     final List<dynamic> rawData = await jsonDecode(response);
+    if (!mounted) return;
     setState(() {
       chapters = rawData.toList();
     });
@@ -93,6 +103,7 @@ class _QuranPageState extends State<QuranPage> {
     final String response =
         await rootBundle.loadString('assets/quran-pages-index.json');
     final Map<String, dynamic> data = await jsonDecode(response);
+    if (!mounted) return;
     setState(() {
       quranPagesIndex = data['pages'] as List;
     });
@@ -104,7 +115,7 @@ class _QuranPageState extends State<QuranPage> {
         prefs.getStringList('bookmarks')?.map((e) => int.parse(e)).toList() ??
             [];
     ayahBookmarks = prefs.getStringList('ayahBookmarks') ?? [];
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   Future<int> _getLastOpenedPage() async {
@@ -131,9 +142,14 @@ class _QuranPageState extends State<QuranPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt('activeWayIndex', newActiveWayIndex);
 
+    if (!mounted) return;
     setState(() {
       activeWayIndex = newActiveWayIndex;
     });
+    final current = _pageController.hasClients
+        ? _pageController.page?.round() ?? 0
+        : 0;
+    _prefetchNeighbors(current + 1);
   }
 
   Future<int> _getActiveWayIndex() async {
@@ -149,6 +165,20 @@ class _QuranPageState extends State<QuranPage> {
   Future<void> _saveFocusHintSeen() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('focusHintSeen', true);
+  }
+
+  Future<void> _setKeepAwake(bool enabled) async {
+    setState(() => _keepAwake = enabled);
+    await AppPreferences.setKeepAwake(enabled);
+    try {
+      if (enabled) {
+        await WakelockPlus.enable();
+      } else {
+        await WakelockPlus.disable();
+      }
+    } catch (_) {
+      // Unsupported platforms keep their default behaviour.
+    }
   }
 
   Future<void> _saveBookmarks() async {
@@ -188,9 +218,11 @@ class _QuranPageState extends State<QuranPage> {
         name: 'asbahani-bookmarks-$stamp.json',
         mimeType: 'application/json',
       );
-      final result = await Share.shareXFiles(
-        [file],
-        subject: 'محفوظات الأصبهاني',
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          files: [file],
+          subject: 'محفوظات الأصبهاني',
+        ),
       );
       if (result.status == ShareResultStatus.success) {
         _showMessage('تم تصدير المحفوظات');
@@ -386,6 +418,8 @@ class _QuranPageState extends State<QuranPage> {
       int lastOpenedPage = await _getLastOpenedPage();
       activeWayIndex = await _getActiveWayIndex();
       _focusHintSeen = await _getFocusHintSeen();
+      _keepAwake = await AppPreferences.keepAwake();
+      if (!mounted) return;
 
       _pageController
           .jumpToPage(lastOpenedPage - 1); // Page starts from 0, so subtract 1
@@ -396,13 +430,16 @@ class _QuranPageState extends State<QuranPage> {
     });
   }
 
-  // Pre-decode neighbor pages so swiping shows them without a delay.
+  // Warm the neighbouring page assets. Waking the hit layers is separate:
+  // they are small JSON files used only for ayah bookmarks/highlights.
   void _prefetchNeighbors(int page) {
-    setState(() {
-      _svgWarmPaths.clear();
-      _prefetchPage(page - 1);
-      _prefetchPage(page + 1);
-    });
+    final azrak = activeWayIndex != 1;
+    _pagePrefetch.update(page, azrak: azrak, context: context);
+    if (azrak) {
+      for (final neighbor in _pagePrefetch.neighbors) {
+        unawaited(_ayahGeometryFor(neighbor));
+      }
+    }
   }
 
   Widget _vectorPicture(
@@ -416,19 +453,24 @@ class _QuranPageState extends State<QuranPage> {
       width: width,
       height: height,
       fit: fit,
+      errorBuilder: (_, __, ___) => _pageLoadErrorPlaceholder(),
     );
   }
 
-  void _prefetchPage(int page) {
-    if (page < 1 || page > totalPagesNumber) return;
-    if (activeWayIndex == 1) {
-      precacheImage(AssetImage('assets/quran_pages/$page.png'), context);
-    } else {
-      final path = 'assets/azrak/$page.svg.vec';
-      rootBundle.load(path); // warm the asset bytes
-      _svgWarmPaths.add(path);
-      unawaited(_ayahGeometryFor(page)); // warm the small JSON hit layer too
-    }
+  Widget _pageLoadErrorPlaceholder() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.broken_image, size: 48, color: Colors.grey),
+          SizedBox(height: 8),
+          Text(
+            'فشل تحميل الصفحة',
+            style: TextStyle(color: Colors.grey, fontFamily: 'amiri'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _pageImageWidget(BuildContext context, int page) {
@@ -463,19 +505,6 @@ class _QuranPageState extends State<QuranPage> {
 
   Widget _imageWidget(String assetPath, BuildContext ctx, int page) {
     final svg = assetPath.endsWith('.svg.vec');
-    Widget placeholder = const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.broken_image, size: 48, color: Colors.grey),
-          SizedBox(height: 8),
-          Text(
-            'فشل تحميل الصفحة',
-            style: TextStyle(color: Colors.grey, fontFamily: 'amiri'),
-          ),
-        ],
-      ),
-    );
 
     return RepaintBoundary(
       child: svg
@@ -531,7 +560,8 @@ class _QuranPageState extends State<QuranPage> {
               assetPath,
               fit: BoxFit.fill,
               gaplessPlayback: true,
-              errorBuilder: (context, error, stackTrace) => placeholder,
+              errorBuilder: (context, error, stackTrace) =>
+                  _pageLoadErrorPlaceholder(),
             ),
     );
   }
@@ -712,8 +742,10 @@ class _QuranPageState extends State<QuranPage> {
 
   @override
   Widget build(BuildContext context) {
-    return PageView.builder(
-      controller: _pageController,
+    return Stack(
+      children: [
+        PageView.builder(
+          controller: _pageController,
       onPageChanged: (index) {
         _saveLastOpenedPage(index + 1);
         _prefetchNeighbors(index + 1);
@@ -767,19 +799,19 @@ class _QuranPageState extends State<QuranPage> {
                 _focusEdgeStrip(exits: true),
                 if (_focusControlsVisible) _focusExitPill(),
               ],
-              // Invisible decoy loads for neighboring pages: this warms the
-              // vector_graphics cache so the real page appears instantly.
-              ..._svgWarmPaths.map((path) => Positioned(
-                    left: 0,
-                    top: 0,
-                    width: 1,
-                    height: 1,
-                    child: Opacity(opacity: 0, child: _vectorPicture(path)),
-                  )),
             ],
           ),
         );
       },
+        ),
+        Positioned(
+          left: 0,
+          top: 0,
+          width: 1,
+          height: 1,
+          child: PagePrefetchOverlay(controller: _pagePrefetch),
+        ),
+      ],
     );
   }
 
@@ -868,28 +900,37 @@ class _QuranPageState extends State<QuranPage> {
 
   void _performSearch(String query) {
     setState(() {
-      searchResults = quran.where((ayah) {
-        return ayah['aya_text_emlaey']
-            .toLowerCase()
-            .contains(query.toLowerCase());
-      }).toList();
+      searchResults = _ayahSearchIndex?.search(query) ?? const <dynamic>[];
     });
   }
 
   Widget _waysTab(BuildContext context) {
-    return ListView.builder(
-      itemCount: ways.length,
-      itemBuilder: (context, index) {
-        final way = ways[index];
+    return Column(
+      children: [
+        SwitchListTile(
+          value: _keepAwake,
+          secondary: const Icon(Icons.screen_lock_portrait),
+          title: const Text('إبقاء الشاشة مضيئة'),
+          onChanged: _setKeepAwake,
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView.builder(
+            itemCount: ways.length,
+            itemBuilder: (context, index) {
+              final way = ways[index];
 
-        return ListTile(
-          title: Text('$way'),
-          onTap: () {
-            Navigator.pop(context);
-            _saveActiveWayIndex(index);
-          },
-        );
-      },
+              return ListTile(
+                title: Text('$way'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _saveActiveWayIndex(index);
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
